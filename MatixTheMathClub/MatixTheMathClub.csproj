@@ -5,7 +5,6 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Matix the Math Club</AssemblyName>
     <RootNamespace>MatixTheMathClub</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
