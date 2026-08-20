@@ -2389,7 +2389,7 @@ function aiTimeout(p,ms){return Promise.race([p,new Promise(function(_,r){setTim
 function stampMatix(html){if(!html)return html;var badge='<div style="position:fixed;left:0;right:0;bottom:0;text-align:center;font:700 12px system-ui,sans-serif;color:#fff;background:rgba(91,70,201,.94);padding:7px;z-index:2147483647">✨ by Matix AI</div>';return /<\/body>/i.test(html)?html.replace(/<\/body>/i,badge+'</body>'):html+badge;}
 function titleOf(html){try{var m=(html||'').match(/<title[^>]*>([^<]*)<\/title>/i);return m?m[1].trim():'';}catch(e){return '';}}
 async function aiGenerate(p){
-  var base='https://'+'text.pollinations'+'.ai';
+  var base=((typeof brainUrl==='function'&&brainUrl())?brainUrl():('https://'+'text.pollinations'+'.ai'));
   var msgs=[{role:'system',content:AI_SYS},{role:'user',content:'Make this: '+p}];
   try{var r=await aiTimeout(fetch(base+'/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai',messages:msgs,referrer:'matixmathclub'})}),26000);if(r.ok){var j=await r.json();var t=(j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';var h=cleanHtml(t);if(looksLikeHtml(h)&&h.length>120)return stampMatix(h);}}catch(e){}
   try{var r2=await aiTimeout(fetch(base+'/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:msgs,model:'openai',referrer:'matixmathclub'})}),26000);if(r2.ok){var h2=cleanHtml(await r2.text());if(looksLikeHtml(h2)&&h2.length>120)return stampMatix(h2);}}catch(e){}
@@ -4901,7 +4901,7 @@ function lrnExPull(){
    AI writes exercises straight into whichever form is open
    ===================================================================== */
 function lrnAiJson(prompt,maxTok){
-  if(!GEMINI_KEY)return Promise.reject(new Error('nokey'));
+  var NOKEY=!GEMINI_KEY;
   var prov=aiProvider(),h={'Content-Type':'application/json'},payload;
   if(prov==='gemini'){
     /* Gemini speaks its own dialect: key in a header, contents instead of messages */
@@ -4909,12 +4909,13 @@ function lrnAiJson(prompt,maxTok){
     payload={contents:[{role:'user',parts:[{text:prompt}]}],
              generationConfig:{temperature:0.3,maxOutputTokens:maxTok||2200}};
   }else{
-    h['Authorization']='Bearer '+GEMINI_KEY;
+    if(!NOKEY)h['Authorization']='Bearer '+GEMINI_KEY;
     if(prov==='openrouter'){h['HTTP-Referer']='https://matixthemathclub.com';h['X-Title']='Matix';}
-    payload={model:aiModel(),messages:[{role:'user',content:prompt}],
+    payload={model:(NOKEY?'openai':aiModel()),messages:[{role:'user',content:prompt}],
              temperature:0.3,max_tokens:maxTok||2200};
+    if(NOKEY)payload.referrer='matixmathclub';
   }
-  return aiTimeout(fetch(aiEndpoint(),{method:'POST',headers:h,body:JSON.stringify(payload)}),45000)
+  return aiTimeout(fetch(((typeof brainUrl==='function'&&brainUrl())?(brainUrl()+'/openai'):(NOKEY?AI_FREE_EP:aiEndpoint())),{method:'POST',headers:h,body:JSON.stringify(payload)}),45000)
     .then(function(r){
       return r.json()['catch'](function(){return {};}).then(function(j){
         if(r.status!==200)throw new Error('HTTP '+r.status+' \u2014 '+String((j&&j.error&&j.error.message)||'no details given').slice(0,200));
@@ -6216,7 +6217,27 @@ function aiGemToOpenai(j){
   if(calls.length)msg.tool_calls=calls;
   return {choices:[{message:msg}]};
 }
+/* ---------- FREE club AI \u2014 keyless, via text.pollinations.ai (same engine as the game maker) ---------- */
+var AI_FREE_EP='https://text.pollinations.ai/openai';
+function aiFreeCall(strict){
+  var msgs=[{role:'system',content:aiSystem()}].concat(AI_TURNS);
+  var body={model:'openai',messages:msgs,tools:aiDeclarations(),tool_choice:'auto',temperature:(strict?0:0.3),max_tokens:8192,referrer:'matixmathclub'};
+  return aiTimeout(fetch(AI_FREE_EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),60000).then(function(r){
+    return r.json()['catch'](function(){return {};}).then(function(j){
+      if(r.status===200&&j&&j.choices&&j.choices[0])return {status:200,json:j};
+      var b2={model:'openai',messages:msgs,temperature:(strict?0:0.3),referrer:'matixmathclub'};
+      return aiTimeout(fetch(AI_FREE_EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b2)}),60000).then(function(r2){
+        return r2.json()['catch'](function(){return {};}).then(function(j2){
+          if(r2.status===200&&j2&&j2.choices&&j2.choices[0])return {status:200,json:j2};
+          return {status:(r2.status||r.status||0),json:(j2&&j2.choices?j2:j)||{}};
+        });
+      });
+    });
+  });
+}
 function aiCall(strict){
+  if(typeof brainUrl==='function'&&brainUrl())return brainCall(strict);
+  if(!GEMINI_KEY)return aiFreeCall(strict);
   if(aiProvider()==='gemini'){
     var gd=aiGemDecls();
     var mkBody=function(){
@@ -6279,6 +6300,7 @@ function aiKeyTest(){
   });
 }
 function aiErrorText(status,j){
+  if(!GEMINI_KEY)return 'The free club AI is a little busy right now \u2014 wait a few seconds and send it again. No key needed, it comes back on its own.';
   var prov=aiProvider();
   if(prov==='gemini'&&status&&status!==401&&status!==403&&!(status===400&&aiToolFail(j)))
     return 'Gemini turned that request down (HTTP '+status+').'+aiWhy(j)+' Model in use: '+aiModel()+'. Use \u201Ctest it\u201D next to the key for a plain-language check.';
@@ -6293,7 +6315,6 @@ function aiErrorText(status,j){
 
 function aiSend(text,files){
   if(AI_BUSY)return;
-  if(!GEMINI_KEY){aiPush({role:'error',text:'No AI key yet. Open this tab as the owner and paste a free Gemini key \u2014 get one at aistudio.google.com/apikey.'});return;}
   AI_BUSY=true;
   var clean=(files||[]).filter(function(f){return f&&!f.skipped;});
   aiPush({role:'me',text:text,files:(files&&files.length)?files:null});
@@ -6333,7 +6354,7 @@ function aiStep(depth,retried,tf){
     aiRunCalls(calls,0,function(){aiStep(depth+1);});
   })['catch'](function(e){
     console.warn('Matix AI network error',e);
-    aiDropThink();aiPush({role:'error',text:'Failed \u2014 the request never reached the AI ('+String((e&&e.message)||e)+'). Check the internet, and on Gemini make sure nothing is blocking generativelanguage.googleapis.com.'});AI_BUSY=false;
+    aiDropThink();aiPush({role:'error',text:(GEMINI_KEY?('Failed \u2014 the request never reached the AI ('+String((e&&e.message)||e)+'). Check the internet, and on Gemini make sure nothing is blocking generativelanguage.googleapis.com.'):('Failed \u2014 could not reach the free club AI ('+String((e&&e.message)||e)+'). Check the internet and try again \u2014 no key needed.'))});AI_BUSY=false;
   });
 }
 function aiRunCalls(calls,i,done){
@@ -6441,20 +6462,18 @@ function renderAI(c,refId){
    +'<small>Ask anything \u2014 it can search the web and control the app.</small></div>'
    +'<button class="lnk" id="aiRenameBtn" title="Rename this chat">\u270F\uFE0F Rename</button></div>';
   if(!GEMINI_KEY){
+    h+=((typeof brainUrl==='function'&&brainUrl())?('<div class="ai-keyok">\uD83E\uDDE0 <b>Club Brain is connected</b> \u2014 Matix AI runs on the club\u2019s OWN Python brain. No outside AI, no APIs.</div>'):'<div class="ai-keyok">\u2705 <b>Free club AI is ON</b> \u2014 no key, no setup. Ask it anything, it can search the web and control the app!</div>');
     if(isOwner()){
-      h+='<div class="ai-warn"><b>\uD83D\uDD11 Add the club AI key</b>'
-       +'Paste a key below \u2014 stored in the database, not app.html, so every member gets AI without a rebuild.<br><br>'
-       +'<b>Option A \u2014 Google Gemini (free):</b> go to <code>aistudio.google.com/apikey</code>, click <b>Create API key</b>, copy it (it starts with <code>AIza</code> or <code>AQ.</code> \u2014 both work), paste it.<br>'
-       +'<b>Option B \u2014 Groq (free):</b> sign up at <code>console.groq.com/keys</code>, create an API key (starts with <code>gsk_</code>), paste it.<br>'
-       +'<b>Option C \u2014 GitHub Models (free):</b> create a fine-grained token at github.com/settings/tokens?type=beta, enable the <b>Models read</b> permission, copy the token (starts with <code>github_pat_</code>).'
-       +'<div class="ai-keyrow">'
-       +'<input id="aiKeyIn" type="password" placeholder="Paste key here (AIza\u2026, AQ.\u2026, gsk_\u2026 or github_pat_\u2026)" autocomplete="off">'
+      h+='<details style="margin:6px 0 10px"><summary style="cursor:pointer;font-size:.85rem;color:var(--muted)">\u2699\uFE0F Optional: use your own key instead (Gemini / Groq / GitHub)</summary>'
+       +'<div class="ai-keyrow" style="margin-top:8px">'
+       +'<input id="aiKeyIn" type="password" placeholder="Paste key (AIza\u2026, AQ.\u2026, gsk_\u2026 or github_pat_\u2026)" autocomplete="off">'
        +'<button class="btn ghost" id="aiGhBtn">\uD83D\uDC19 GitHub</button>'
        +'<button class="btn" id="aiKeySave">Save</button>'
-       +'</div></div>';
-    } else {
-      h+='<div class="ai-warn"><b>\u2728 Matix AI is not switched on yet</b>'
-       +'Ghadi needs to add the club AI key before this tab works. Ask the owner \u2014 it takes about a minute.</div>';
+       +'</div>'
+       +'<div class="ai-keyrow" style="margin-top:8px">'
+       +'<input id="aiBrainIn" type="text" value="'+esc((typeof MATIX_BRAIN==='string'?MATIX_BRAIN:'')||'')+'" placeholder="\uD83E\uDDE0 Club Brain address (from matix_brain.py) \u2014 e.g. http://192.168.1.20:8787" autocomplete="off">'
+       +'<button class="btn" id="aiBrainSave">\uD83E\uDDE0 Save</button>'
+       +'</div></details>';
     }
   } else if(isOwner()){
     var prov=aiProvider();
@@ -8547,7 +8566,7 @@ function lxRenderStart(c){
      +'<h1>'+esc(tr('Math Learn'))+'</h1>'
      +'<p>'+esc(tr("Type anything you want to learn. The Matix AI checks Ghadi's lessons, searches trusted sites, double-checks the facts, then teaches you step by step — with exercises."))+'</p>'
      +'<div class="lb-ask"><div class="lb-ask-ring"></div><div class="lb-ask-in">'
-       +'<span class="ic">\uD83E\uDDE0</span><input id="lxAsk" placeholder="'+esc(tr('e.g. fractions, solving equations, percentages…'))+'" autocomplete="off">'
+       +'<span class="ic">\uD83E\uDDE0</span><input id="lxAsk" placeholder="'+esc(tr('e.g. fractions, percentages, Minecraft, volcanoes…'))+'" autocomplete="off">'
        +'<button class="go" id="lxGo">'+esc(tr('Teach me'))+'</button>'
      +'</div></div>'
      +'<div class="lx-meta"><span class="lx-pill hot">\u26A1 '+esc(tr('instant if someone learned it before'))+'</span><span class="lx-pill">\uD83D\uDC51 '+esc(tr('uses owner lessons'))+'</span><span class="lx-pill">\uD83D\uDD12 '+esc(tr('double-checked sources'))+'</span></div>'
@@ -9183,6 +9202,26 @@ function lxOwnerExercises(ownerLessons){
   });
   return out;
 }
+var LX_MATH_RE=/\b(math|maths|mathematic\w*|number|fraction\w*|decimal\w*|percent\w*|ratio|proportion|equation\w*|algebra\w*|geometr\w*|angle\w*|triangle\w*|circle\w*|root|prime\w*|multipl\w*|divis\w*|divid\w*|addition|subtract\w*|minus|plus|times table\w*|integer\w*|negative\w*|exponent\w*|power\w*|graph\w*|probabilit\w*|statistic\w*|mean|median|mode|perimeter|area|volume|measur\w*|calculus|derivative\w*|trigonometr\w*|sine|cosine|tangent|polygon\w*|rectangle\w*|sequence\w*|arithmetic|sum|difference|product|quotient|place value|round\w*|estimat\w*|factor\w*|lcm|gcf|gcd|hcf|inequalit\w*|slope|linear|quadratic\w*|polynomial\w*|matrix|matrices|vector\w*|logarithm\w*)\b/i;
+function lxIsMathTopic(t){return LX_MATH_RE.test(String(t||''));}
+function lxTopicQuiz(topic,facts){
+  var ex=[];
+  (facts||[]).slice(0,6).forEach(function(f){
+    if(ex.length>=8)return;
+    var words=f.split(' ').filter(function(w){return w.replace(/[^A-Za-z\u00C0-\u024F]/g,'').length>4;});
+    if(words.length<2)return;
+    var hide=words[Math.floor(words.length/2)];
+    var clean=hide.replace(/[.,;:!?()"']/g,'');
+    var blanked=f.replace(hide,'_____');
+    if(ex.length%2===1){
+      var wrong=words.filter(function(w){var c=w.replace(/[.,;:!?()"']/g,'');return c.toLowerCase()!==clean.toLowerCase()&&c.length>3;}).slice(0,3).map(function(w){return w.replace(/[.,;:!?()"']/g,'');});
+      if(wrong.length>=2){ex.push(mxMc('Which word completes this? \u201C'+blanked+'\u201D',clean,wrong,'It is in the lesson above.','The answer is "'+clean+'".'));return;}
+    }
+    ex.push(mxInp('Fill the blank: '+blanked,clean,'Re-read the lesson above!','The missing word is "'+clean+'".'));
+  });
+  if(!ex.length)ex.push(mxMc('What is this lesson about?',topic,['something else entirely','a random mystery','nobody knows'],'Easy one!','It is about '+topic+'.'));
+  return ex.slice(0,8);
+}
 function lxBuildLesson(topic,onStage){
   var slug=lxSlug(topic);
   function stage(i){try{onStage&&onStage(i);}catch(e){}}
@@ -9214,11 +9253,11 @@ function lxBuildLesson(topic,onStage){
         steps.push({title:'Start with the idea',body:facts[0]});
         if(facts[1])steps.push({title:'A little deeper',body:facts[1]});
         if(facts[2])steps.push({title:'One more piece',body:facts.slice(2,4).join(' ')});
-        steps.push({title:'Try it yourself',body:'Scroll down and try the practice — learning math means doing math!'});
+        steps.push({title:'Try it yourself',body:lxIsMathTopic(topic)?'Scroll down and try the practice — learning math means doing math!':'Scroll down and try the quick quiz — it was built from the facts above!'});
       }else{
-        steps=[{title:'Start here',body:'This is a math topic — and every math topic starts with small, friendly steps.'},{title:'Practice makes progress',body:'Try the warm-up exercises below, then ask the owner to add a lesson about "'+topic+'" for the club.'}];
+        steps=lxIsMathTopic(topic)?[{title:'Start here',body:'This is a math topic — and every math topic starts with small, friendly steps.'},{title:'Practice makes progress',body:'Try the warm-up exercises below, then ask the owner to add a lesson about "'+topic+'" for the club.'}]:[{title:'Hmm — not much out there',body:'Matix could not find trusted sources about "'+topic+'" — and no, it will not pretend it is math. Try one simple word instead (for example "Minecraft" rather than "how to play Minecraft").'},{title:'Another way',body:'Ask Matix AI in the ✨ tab — it can search the web and explain "'+topic+'" step by step.'}];
       }
-      lesson={emoji:'📘',title:topic.charAt(0).toUpperCase()+topic.slice(1),intro:facts[0]||('Let\u2019s explore '+topic+' one small step at a time.'),steps:steps,examples:[],mistakes:['Rushing — slow is smooth, smooth is fast.','Skipping steps — every line matters.','Not checking the answer at the end.'],glossary:[],exercises:lxGenericExercises(topic,facts)};
+      lesson={emoji:(lxIsMathTopic(topic)?'📘':'🧭'),title:topic.charAt(0).toUpperCase()+topic.slice(1),intro:facts[0]||('Let\u2019s explore '+topic+' one small step at a time.'),steps:steps,examples:[],mistakes:['Rushing — slow is smooth, smooth is fast.','Skipping steps — every line matters.','Not checking the answer at the end.'],glossary:[],exercises:(lxIsMathTopic(topic)?lxGenericExercises(topic,facts):lxTopicQuiz(topic,facts))};
     }
     if(owners.length){
       lesson.steps.unshift({title:'From the club\u2019s own lessons',body:owners.map(function(o){return o.title+': '+String(o.howto||'').split('\n')[0];}).join(' • ')});
@@ -9234,7 +9273,8 @@ function lxBuildLesson(topic,onStage){
     if(owners.length)lesson.sources.push({name:'Owner lessons ('+owners.length+')',url:''});
     lesson.ownerLessonsUsed=owners.map(function(o){return o.title;});
     lesson.agreement=kb&&!webs.length?100:check.agreement;
-    if(!lesson.exercises||lesson.exercises.length<6)lesson.exercises=lxGenericExercises(topic,check.facts);
+    if(!lesson.exercises||!lesson.exercises.length)lesson.exercises=(lxIsMathTopic(topic)?lxGenericExercises(topic,check.facts):lxTopicQuiz(topic,check.facts));
+    else if(lxIsMathTopic(topic)&&lesson.exercises.length<6)lesson.exercises=lxGenericExercises(topic,check.facts);
     lesson.exercises=lesson.exercises.slice(0,8);
     lesson.createdAt=Date.now();
     fbPut('/learnai/lessons/'+slug,lesson)['catch'](function(){});
@@ -9260,7 +9300,7 @@ function lxRenderStart(c){
    +'<h1>'+esc(tr('Math Learn'))+'</h1>'
    +'<p>'+esc(tr('Type anything you want to learn. Matix checks the owner\u2019s lessons, reads trusted sources, double-checks the facts, then teaches you step by step — with exercises.'))+'</p>'
    +'<div class="lb-ask"><div class="lb-ask-ring"></div><div class="lb-ask-in">'
-   +'<span class="ic">🧠</span><input id="lxTopic" placeholder="'+esc(tr('e.g. fractions, solving equations, percentages…'))+'" autocomplete="off">'
+   +'<span class="ic">🧠</span><input id="lxTopic" placeholder="'+esc(tr('e.g. fractions, percentages, Minecraft, volcanoes…'))+'" autocomplete="off">'
    +'<button class="go" id="lxGo">'+esc(tr('Teach me'))+'</button></div></div>'
    +'<div class="lx-meta">'
    +'<span class="lx-pill hot">⚡ '+esc(tr('instant if someone learned it before'))+'</span>'
@@ -9574,7 +9614,7 @@ var MXAI_LOG=[];
 try{MXAI_LOG=JSON.parse(lsGet('mx_ai_log')||'[]')||[];}catch(e){MXAI_LOG=[];}
 function mxaiSave(){try{lsSet('mx_ai_log',JSON.stringify(MXAI_LOG.slice(-60)));}catch(e){}}
 var MXAI_CHIPS=['solve 2x + 5 = 13','what is 15% of 80?','3/4 + 1/6','is 97 prime?','mean of 4, 8, 9, 11','teach me fractions','tell me a math joke'];
-function renderAI(c){
+function renderOfflineMathAI(c){
   c.innerHTML='<div class="mxai-wrap">'
    +'<div class="mxai-head"><div class="mxai-orb">\u2728</div>'
    +'<div style="flex:1"><b>Matix AI</b><small>'+esc(tr('100% built by the club — no keys, no internet, instant answers'))+'</small></div>'
@@ -9734,51 +9774,121 @@ function mxtrTranslate(text,from,to){
   }
   return {text:out.filter(function(x){return x!=='';}).join(' '),missed:missed};
 }
+var MXTR2_LANGS=[['en','English'],['ar','\u0627\u0644\u0639\u0631\u0628\u064A\u0629 (Arabic)'],['fr','Fran\u00E7ais (French)'],['es','Espa\u00F1ol (Spanish)'],['de','Deutsch (German)'],['tr','T\u00FCrk\u00E7e (Turkish)'],['it','Italiano (Italian)'],['pt','Portugu\u00EAs (Portuguese)'],['ru','\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (Russian)'],['ja','\u65E5\u672C\u8A9E (Japanese)'],['ko','\uD55C\uAD6D\uC5B4 (Korean)'],['zh-CN','\u4E2D\u6587 (Chinese)'],['hi','\u0939\u093F\u0928\u094D\u0926\u0940 (Hindi)'],['nl','Nederlands (Dutch)'],['pl','Polski (Polish)'],['uk','\u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430 (Ukrainian)']];
+var MXTR2_NAMES={en:'English',ar:'Arabic',fr:'French',es:'Spanish',de:'German',tr:'Turkish',it:'Italian',pt:'Portuguese',ru:'Russian',ja:'Japanese',ko:'Korean','zh-CN':'Chinese (Simplified)',hi:'Hindi',nl:'Dutch',pl:'Polish',uk:'Ukrainian'};
+function mxtr2Detect(t){
+  t=String(t||'');
+  if(/[\u0600-\u06FF]/.test(t))return 'ar';
+  if(/[\u0400-\u04FF]/.test(t))return 'ru';
+  if(/[\u3040-\u30FF]/.test(t))return 'ja';
+  if(/[\uAC00-\uD7AF]/.test(t))return 'ko';
+  if(/[\u4E00-\u9FFF]/.test(t))return 'zh-CN';
+  if(/[\u0900-\u097F]/.test(t))return 'hi';
+  var tl=' '+t.toLowerCase().replace(/[.,!?;:]/g,' ')+' ';
+  var scores={es:0,fr:0,de:0,it:0,pt:0,en:0};
+  var packs=[['es',/[\u00BF\u00A1\u00F1]|\ses\s|\sel\s|\slos\s|\slas\s|\sest\u00E1\s|\sc\u00F3mo\s|\squ\u00E9\s|\spor\s|\spara\s|\sgracias\s|\shola\s|\susted\s|\spero\s|\scon\s|\suna\s|\suno\s|\smuy\s|\sbien\s/g],
+   ['fr',/[\u00E0\u00E2\u00E7\u00E8\u00EA\u00EB\u00EE\u00EF\u00F4\u00FB\u00F9\u0153]|\sle\s|\sles\s|\sest\s|\sje\s|\stu\s|\svous\s|\snous\s|\savec\s|\spour\s|\smais\s|\sbonjour\s|\smerci\s|\soui\s/g],
+   ['de',/[\u00E4\u00F6\u00FC\u00DF]|\sder\s|\sdie\s|\sdas\s|\sund\s|\sist\s|\snicht\s|\sich\s|\swir\s|\smit\s|\sf\u00FCr\s|\saber\s|\shallo\s|\sdanke\s/g],
+   ['it',/\sil\s|\sgli\s|\s\u00E8\s|\ssono\s|\sciao\s|\sgrazie\s|\sperch\u00E9\s|\sche\s|\snon\s|\smolto\s/g],
+   ['pt',/[\u00E3\u00F5]|\svoc\u00EA\s|\sobrigado\s|\sol\u00E1\s|\sn\u00E3o\s|\suma\s|\scomo\s|\sbem\s/g],
+   ['en',/\sthe\s|\sis\s|\sare\s|\sand\s|\syou\s|\sfor\s|\swith\s|\sthis\s|\sthat\s|\shello\s|\sthanks\s|\swhat\s|\show\s|\svery\s/g]];
+  packs.forEach(function(p){var m=tl.match(p[1]);if(m)scores[p[0]]+=m.length;});
+  var best='en',bs=0;
+  Object.keys(scores).forEach(function(k){if(scores[k]>bs){bs=scores[k];best=k;}});
+  return best;
+}
+function mxtr2Chunks(t){
+  var out=[],cur='';
+  String(t).split(/(?<=[.!?\u061F\n])\s+/).forEach(function(x){
+    if((cur+' '+x).length>450){if(cur)out.push(cur);cur=x;}
+    else cur=cur?cur+' '+x:x;
+  });
+  if(cur)out.push(cur);
+  if(!out.length)out=[String(t)];
+  var fin=[];
+  out.forEach(function(c){while(c.length>450){fin.push(c.slice(0,450));c=c.slice(450);}if(c)fin.push(c);});
+  return fin;
+}
+var MXTR_EXACT = {
+  'en|es': {'the':'el / la','a':'un / una','an':'un / una','and':'y','or':'o','is':'es','are':'son / están','you':'tú / usted','i':'yo','we':'nosotros','they':'ellos','he':'él','she':'ella','it':'eso','in':'en','on':'en','at':'en','to':'a','for':'para / por','with':'con','without':'sin','day':'día','night':'noche','water':'agua','food':'comida','school':'escuela','math':'matemáticas','club':'club','friend':'amigo','book':'libro','game':'juego','play':'jugar','learn':'aprender','yes':'sí','no':'no','hello':'hola','hi':'hola','goodbye':'adiós','bye':'adiós','thanks':'gracias','please':'por favor'},
+  'en|fr': {'the':'le / la / les','a':'un / une','an':'un / une','and':'et','or':'ou','is':'est','are':'sont','you':'tu / vous','i':'je','we':'nous','they':'ils / elles','he':'il','she':'elle','day':'jour','night':'nuit','water':'eau','math':'mathématiques','club':'club','friend':'ami','book':'livre','game':'jeu','play':'jouer','learn':'apprendre','yes':'oui','no':'non','hello':'bonjour','hi':'salut','goodbye':'au revoir','thanks':'merci','please':'s'il vous plaît'},
+  'en|ar': {'the':'الـ','a':'','an':'','and':'و','or':'أو','is':'هو / هي','are':'هم','you':'أنت','i':'أنا','we':'نحن','they':'هم','he':'هو','she':'هي','day':'يوم','night':'ليل','water':'ماء','math':'رياضيات','club':'نادي','friend':'صديق','book':'كتاب','game':'لعبة','play':'يلعب','learn':'يتعلم','yes':'نعم','no':'لا','hello':'مرحبا','hi':'أهلا','goodbye':'مع السلامة','thanks':'شكرا','please':'من فضلك'}
+};
+function mxtr2One(chunk,from,to){
+  var lk = (from||'auto').toLowerCase()+'|'+(to||'').toLowerCase();
+  var ck = String(chunk||'').trim().toLowerCase();
+  if(MXTR_EXACT[lk] && MXTR_EXACT[lk][ck] !== undefined){
+    return Promise.resolve(MXTR_EXACT[lk][ck]);
+  }
+  var u='https://api.mymemory.translated.net/get?q='+encodeURIComponent(chunk)+'&langpair='+encodeURIComponent(from)+'%7C'+encodeURIComponent(to)+'&de=club%40matixthemathclub.com';
+  return aiTimeout(fetch(u),12000).then(function(r){return r.json();}).then(function(j){
+    var t=j&&j.responseData&&j.responseData.translatedText;
+    if(!t||/MYMEMORY WARNING|QUERY LENGTH|INVALID|NO QUERY/i.test(String(t)))throw new Error('mymemory');
+    var d=document.createElement('textarea');d.innerHTML=String(t);
+    return d.value;
+  });
+}
+function mxtr2Ai(text,from,to){
+  var sys='You are a precise translator. Translate the user text into '+(MXTR2_NAMES[to]||to)+((from&&from!=='auto')?' (source language: '+(MXTR2_NAMES[from]||from)+')':'')+'. Reply with ONLY the translation - no quotes, no notes, no explanations. Keep numbers, emoji and line breaks exactly as they are.';
+  return aiTimeout(fetch(((typeof brainUrl==='function'&&brainUrl())?(brainUrl()+'/openai'):AI_FREE_EP),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai',messages:[{role:'system',content:sys},{role:'user',content:text}],temperature:0,referrer:'matixmathclub'})}),30000)
+    .then(function(r){return r.json();}).then(function(j){
+      var t=String((((j.choices||[])[0]||{}).message||{}).content||'').trim();
+      if(!t)throw new Error('empty');
+      return t;
+    });
+}
+function mxtr2Translate(text,from,to){
+  var chunks=mxtr2Chunks(text);
+  return Promise.all(chunks.map(function(c){return mxtr2One(c,from,to);}))
+    .then(function(parts){return parts.join(' ');})
+    ['catch'](function(){return mxtr2Ai(text,from,to);});
+}
 var MXTR_LAST='';
 function renderTranslate(c){
-  var savedTo=lsGet('mx_tr_to')||'ar',savedFrom=lsGet('mx_tr_from')||'auto';
+  var savedTo=lsGet('mx_tr_to2')||'es',savedFrom=lsGet('mx_tr_from2')||'auto';
   function opts(sel,withAuto){
     var h=withAuto?('<option value="auto"'+(sel==='auto'?' selected':'')+'>'+esc(tr('Auto-detect'))+'</option>'):'';
-    Object.keys(MXTR_LANGS).forEach(function(k){h+='<option value="'+k+'"'+(sel===k?' selected':'')+'>'+esc(MXTR_LANGS[k])+'</option>';});
+    MXTR2_LANGS.forEach(function(p){h+='<option value="'+p[0]+'"'+(sel===p[0]?' selected':'')+'>'+esc(p[1])+'</option>';});
     return h;
   }
   c.innerHTML='<div class="mxtr-wrap">'
-   +'<div class="lb-ph c-blue"><span class="ic">\uD83C\uDF10</span><div><h1>'+esc(tr('Translator'))+'</h1><p>'+esc(tr('Built by Matix — our own dictionary, no internet, no external AI. English · Arabic · French.'))+'</p></div></div>'
+   +'<div class="lb-ph c-blue"><span class="ic">\uD83C\uDF10</span><div><h1>'+esc(tr('Translator'))+'</h1><p>'+esc(tr('Full-language translation \u2014 every word, every sentence. English \u00B7 Arabic \u00B7 French \u00B7 Spanish + 12 more.'))+'</p></div></div>'
    +'<div class="mxtr-card">'
    +'<div class="mxtr-bar"><span class="tr-lab">'+esc(tr('From'))+'</span><select id="mxtrFrom">'+opts(savedFrom,true)+'</select>'
    +'<button class="mxtr-swap" id="mxtrSwap" title="'+esc(tr('Swap'))+'">\u21c4</button>'
    +'<span class="tr-lab">'+esc(tr('To'))+'</span><select id="mxtrTo">'+opts(savedTo,false)+'</select></div>'
-   +'<textarea id="mxtrIn" class="mxtr-in" placeholder="'+esc(tr('Type here — it translates as you type…'))+'"></textarea>'
-   +'<div class="mxtr-out" id="mxtrOut"><span style="opacity:.5">'+esc(tr('Translation appears here'))+'…</span></div>'
+   +'<textarea id="mxtrIn" class="mxtr-in" placeholder="'+esc(tr('Type here \u2014 it translates as you type\u2026'))+'"></textarea>'
+   +'<div class="mxtr-out" id="mxtrOut"><span style="opacity:.5">'+esc(tr('Translation appears here'))+'\u2026</span></div>'
    +'<div class="mxtr-miss" id="mxtrMiss"></div>'
    +'<div style="display:flex;gap:8px;margin-top:10px"><button class="mini-btn" id="mxtrCopy">\uD83D\uDCCB '+esc(tr('Copy'))+'</button>'
    +'<button class="mini-btn" id="mxtrSay">\uD83D\uDD0A '+esc(tr('Listen'))+'</button>'
-   +'<span style="margin-left:auto;color:var(--muted);font-size:.78rem">\uD83D\uDCD6 '+MXTR_ROWS.length+' '+esc(tr('words — growing every update'))+'</span></div>'
-   +'</div>'
-   +'<div class="mxtr-card mxtr-gloss" style="margin-top:16px">'
-   +'<b>\uD83D\uDCDA '+esc(tr('Club dictionary'))+'</b>'
-   +'<input id="mxtrSearch" placeholder="'+esc(tr('Search a word…'))+'" style="width:100%;margin:10px 0;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg)">'
-   +'<div id="mxtrTable" style="max-height:340px;overflow:auto"></div>'
+   +'<span style="margin-left:auto;color:var(--muted);font-size:.78rem">\uD83C\uDF0D '+esc(tr('16 languages \u2014 100,000+ words each'))+'</span></div>'
    +'</div></div>';
   var inEl=$('mxtrIn'),outEl=$('mxtrOut'),missEl=$('mxtrMiss'),fromEl=$('mxtrFrom'),toEl=$('mxtrTo');
+  var seq=0,deb=null;
   function run(){
     var txt=inEl.value.trim();
-    if(!txt){outEl.innerHTML='<span style="opacity:.5">'+esc(tr('Translation appears here'))+'…</span>';outEl.classList.remove('rtl');missEl.textContent='';MXTR_LAST='';return;}
-    var from=fromEl.value==='auto'?mxtrDetect(txt):fromEl.value;
+    if(!txt){outEl.innerHTML='<span style="opacity:.5">'+esc(tr('Translation appears here'))+'\u2026</span>';outEl.classList.remove('rtl');missEl.textContent='';MXTR_LAST='';return;}
+    var from=fromEl.value==='auto'?mxtr2Detect(txt):fromEl.value;
     var to=toEl.value;
-    if(from===to){outEl.textContent=txt;MXTR_LAST=txt;missEl.textContent=tr('Same language on both sides — nothing to do!');return;}
-    var r=mxtrTranslate(txt,from,to);
-    MXTR_LAST=r.text;
-    outEl.textContent=r.text;
-    outEl.classList.toggle('rtl',to==='ar');
-    missEl.textContent=r.missed.length?('\u26a0\ufe0f '+r.missed.length+' '+tr('word(s) not in the club dictionary yet:')+' '+r.missed.slice(0,6).join(', ')):('\u2705 '+tr('every word matched the club dictionary'));
-    lsSet('mx_tr_to',to);lsSet('mx_tr_from',fromEl.value);
+    lsSet('mx_tr_to2',to);lsSet('mx_tr_from2',fromEl.value);
+    if(from===to){outEl.textContent=txt;MXTR_LAST=txt;missEl.textContent=tr('Same language on both sides \u2014 nothing to do!');return;}
+    var my=++seq;
+    outEl.innerHTML='<span style="opacity:.6">'+esc(tr('Translating'))+'\u2026</span>';
+    missEl.textContent='';
+    mxtr2Translate(txt,from,to).then(function(out){
+      if(my!==seq)return;
+      MXTR_LAST=out;outEl.textContent=out;
+      outEl.classList.toggle('rtl',to==='ar');
+    })['catch'](function(e){
+      if(my!==seq)return;
+      outEl.innerHTML='<span style="color:var(--red)">'+esc(tr('Translation needs internet \u2014 check the connection and try again.'))+'</span>';
+    });
   }
-  var deb=null;
-  inEl.oninput=function(){clearTimeout(deb);deb=setTimeout(run,220);};
+  inEl.oninput=function(){clearTimeout(deb);deb=setTimeout(run,650);};
   fromEl.onchange=run;toEl.onchange=run;
   $('mxtrSwap').onclick=function(){
-    var f=fromEl.value==='auto'?mxtrDetect(inEl.value||'hello'):fromEl.value;
+    var f=fromEl.value==='auto'?mxtr2Detect(inEl.value||'hello'):fromEl.value;
     var t=toEl.value;
     fromEl.value=t;toEl.value=f;
     if(MXTR_LAST)inEl.value=MXTR_LAST;
@@ -9787,21 +9897,8 @@ function renderTranslate(c){
   $('mxtrCopy').onclick=function(){if(!MXTR_LAST){toast(tr('Nothing to copy yet'),'err');return;}try{navigator.clipboard.writeText(MXTR_LAST);toast('\uD83D\uDCCB '+tr('Copied'));}catch(e){toast(tr('Copy failed'),'err');}};
   $('mxtrSay').onclick=function(){
     if(!MXTR_LAST){toast(tr('Nothing to read yet'),'err');return;}
-    try{var u=new SpeechSynthesisUtterance(MXTR_LAST);u.lang={en:'en-US',ar:'ar-SA',fr:'fr-FR'}[toEl.value]||'en-US';speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){toast(tr('Speech is not available here'),'err');}
+    try{var u=new SpeechSynthesisUtterance(MXTR_LAST);u.lang={en:'en-US',ar:'ar-SA',fr:'fr-FR',es:'es-ES',de:'de-DE',tr:'tr-TR',it:'it-IT',pt:'pt-PT',ru:'ru-RU',ja:'ja-JP',ko:'ko-KR','zh-CN':'zh-CN',hi:'hi-IN',nl:'nl-NL',pl:'pl-PL',uk:'uk-UA'}[toEl.value]||'en-US';speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){toast(tr('Speech is not available here'),'err');}
   };
-  function paintTable(q){
-    q=mxtrNorm(q||'','en');
-    var rows=MXTR_ROWS.filter(function(r){
-      if(!q)return true;
-      return mxtrNorm(r[0],'en').indexOf(q)>-1||mxtrNorm(r[1],'ar').indexOf(mxtrNorm(q,'ar'))>-1||mxtrNorm(r[2],'fr').indexOf(q)>-1;
-    }).slice(0,80);
-    var h='<table><tr><th>English</th><th style="text-align:right">العربية</th><th>Français</th></tr>';
-    rows.forEach(function(r){h+='<tr><td>'+esc(r[0])+'</td><td style="text-align:right;direction:rtl">'+(r[1]?esc(r[1]):'—')+'</td><td>'+esc(r[2])+'</td></tr>';});
-    h+='</table>';
-    $('mxtrTable').innerHTML=h;
-  }
-  $('mxtrSearch').oninput=function(){paintTable(this.value);};
-  paintTable('');
   inEl.focus();
 }
 
@@ -10172,14 +10269,18 @@ function mx4Brain(qRaw){
   if(m){var wa=parseFloat(m[1]),wb=parseFloat(m[3]),gain=/buy|get|win|find|add/.test(m[2]);
     return B(wa+(gain?' + ':' \u2212 ')+wb+' = '+mx4Round(gain?wa+wb:wa-wb,4))+S(gain?'you started with '+wa+' and gained '+wb:'you started with '+wa+' and lost '+wb);}
   /* translate hook */
-  m=ql.match(/translate\s+(.+?)\s+(?:to|into)\s+(arabic|french|english)/);
-  if(m&&typeof mxtrTranslate==='function'&&typeof mxtrDetect==='function'){
-    try{
-      var LM={arabic:'ar',french:'fr',english:'en'},tgt=LM[m[2]],src=mxtrDetect(m[1]);
-      var tres=mxtrTranslate(m[1],src,tgt);
-      var outTxt=(tres&&typeof tres==='object')?(tres.out||tres.text||''):String(tres||'');
-      if(outTxt)return {html:'\uD83C\uDF10 '+B(esc(outTxt))+'<br><small>from our club dictionary \u2014 no internet, no external AI</small>',action:{label:'\uD83C\uDF10 Open Translator',run:function(){openTab({kind:'translate'});}}};
-    }catch(e){}
+  m=ql.match(/translate\s+(.+?)\s+(?:to|into)\s+([a-z\u00C0-\u024F-]+)/);
+  if(m){
+    var LM={arabic:'ar',french:'fr',english:'en'},tgt=LM[m[2]];
+    if(tgt&&typeof mxtrTranslate==='function'&&typeof mxtrDetect==='function'){
+      try{
+        var src=mxtrDetect(m[1]);
+        var tres=mxtrTranslate(m[1],src,tgt);
+        var outTxt=(tres&&typeof tres==='object')?(tres.out||tres.text||''):String(tres||'');
+        if(outTxt&&!(tres&&tres.missed&&tres.missed.length))return {html:'\uD83C\uDF10 '+B(esc(outTxt))+'<br><small>quick offline guess \u2014 the Translator tab does whole sentences in 16 languages</small>',action:{label:'\uD83C\uDF10 Open Translator',run:function(){openTab({kind:'translate'});}}};
+      }catch(e){}
+    }
+    return {html:'\uD83C\uDF10 The Translator tab can do that \u2014 whole sentences, 16 languages including Spanish.',action:{label:'\uD83C\uDF10 Open Translator',run:function(){openTab({kind:'translate'});}}};
   }
   /* open pages */
   m=ql.match(/^(?:open|go to|take me to|show me)\s+(home|games|points|ideas|math learn|learn|translator|translate|theme|messages|discussions|users|members|bugs|changelog)/);
@@ -10425,7 +10526,7 @@ function mx7Topic(t){
       return (LX_KB[k]&&LX_KB[k].title)?LX_KB[k].title:k;
     }catch(e){}
   }
-  var s2=sl.replace(/^(teach me|show me|explain|learn)\s+(about\s+)?/,'').replace(/[?!.]+$/,'').trim();
+  var s2=sl.replace(/^(teach me|show me|explain|learn)\s+(about\s+)?/,'').replace(/^how\s+(do|does|to|can|would|should)\s+(i\s+|you\s+|we\s+|u\s+)?(play|make|do|use|build|get|start|win|beat|cook|draw|write|say|speak|ride|drive|code|craft|install|download)\s+/,'').replace(/^how\s+to\s+/,'').replace(/^what\s+is\s+(a\s+|an\s+|the\s+)?/,'').replace(/[?!.]+$/,'').trim();
   return s2||s;
 }
 var _mx7Build=lxBuildLesson;
@@ -10828,6 +10929,76 @@ setInterval(function(){
     hero.appendChild(b);
   }catch(e){}
 },500);
+
+
+/* ================= MATIX NATIVE BRIDGE + CLUB BRAIN (your own Python AI) ================= */
+var MATIX_BRAIN=(function(){try{return (lsGet('mx_brain_url')||'').trim();}catch(e){return '';}})();
+function brainUrl(){return String(MATIX_BRAIN||'').trim().replace(/\/+$/,'');}
+function brainCall(strict){
+  var msgs=[{role:'system',content:aiSystem()}].concat(AI_TURNS);
+  return aiTimeout(fetch(brainUrl()+'/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'matix-brain',messages:msgs,temperature:(strict?0:0.3)})}),25000)
+    .then(function(r){return r.json()['catch'](function(){return {};}).then(function(j){
+      if(r.status===200&&j&&j.choices&&j.choices[0])return {status:200,json:j};
+      throw new Error('brain');
+    });})
+    ['catch'](function(){return aiFreeCall(strict);});
+}
+try{fbGet('/config/brainUrl').then(function(v){if(typeof v==='string'&&v.trim()){MATIX_BRAIN=v.trim();try{lsSet('mx_brain_url',MATIX_BRAIN);}catch(e){}}})['catch'](function(){});}catch(e){}
+document.addEventListener('click',function(ev){
+  var t=ev.target;
+  if(t&&t.id==='aiBrainSave'){
+    var inp=document.getElementById('aiBrainIn');
+    var v=(inp&&inp.value||'').trim().replace(/\/+$/,'');
+    MATIX_BRAIN=v;
+    try{lsSet('mx_brain_url',v);}catch(e){}
+    try{if(typeof isOwner==='function'&&isOwner())fbPut('/config/brainUrl',v);}catch(e){}
+    try{toast(v?'\uD83E\uDDE0 Club Brain connected \u2014 all AI now runs on YOUR Python!':'Brain removed \u2014 using the free club AI');}catch(e){}
+  }
+});
+function mxNativeNotify(title,body){
+  title=String(title||'Matix the Math Club');body=String(body||'');
+  try{if(window.MatixNative&&window.MatixNative.notify){window.MatixNative.notify(title,body);return true;}}catch(e){}
+  try{if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.matix){window.webkit.messageHandlers.matix.postMessage({type:'notify',title:title,body:body});return true;}}catch(e){}
+  try{if(window.chrome&&window.chrome.webview){window.chrome.webview.postMessage(JSON.stringify({type:'notify',title:title,body:body}));return true;}}catch(e){}
+  try{if(typeof Notification!=='undefined'&&Notification.permission==='granted'){new Notification(title,{body:body});return true;}}catch(e){}
+  return false;
+}
+function mxNotiText(n){
+  n=n||{};
+  var title=String(n.title||'').trim()||'\uD83D\uDD14 Matix the Math Club';
+  var body=String(n.body||n.text||n.message||'').trim()||'Something new happened \u2014 open the app!';
+  return {title:title.slice(0,80),body:body.slice(0,180)};
+}
+var MX_NOTI_SEEN=null;
+function mxNotiPoll(){
+  try{
+    if(typeof ME==='undefined'||!ME)return;
+    fbGet('/notifications/'+encodeURIComponent(ME)).then(function(all){
+      all=all||{};
+      var keys=Object.keys(all);
+      if(MX_NOTI_SEEN===null){
+        MX_NOTI_SEEN={};
+        var stored=null;
+        try{stored=lsGet('mx_noti_seen');}catch(e){}
+        if(stored){try{MX_NOTI_SEEN=JSON.parse(stored)||{};}catch(e){MX_NOTI_SEEN={};}}
+        else{keys.forEach(function(k){MX_NOTI_SEEN[k]=1;});}
+      }
+      var fresh=keys.filter(function(k){return !MX_NOTI_SEEN[k];});
+      fresh.slice(0,3).forEach(function(k){var m=mxNotiText(all[k]);mxNativeNotify(m.title,m.body);});
+      if(keys.length){
+        var keep={};keys.forEach(function(k){keep[k]=1;});
+        MX_NOTI_SEEN=keep;
+        try{lsSet('mx_noti_seen',JSON.stringify(keep));}catch(e){}
+      }
+    })['catch'](function(){});
+  }catch(e){}
+}
+try{
+  var hasNativeBridge=!!(window.MatixNative||(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.matix)||(window.chrome&&window.chrome.webview));
+  if(!hasNativeBridge&&typeof Notification!=='undefined'&&Notification.permission==='default'){var rp=Notification.requestPermission();if(rp&&rp['catch'])rp['catch'](function(){});}
+}catch(e){}
+setInterval(mxNotiPoll,20000);
+setTimeout(mxNotiPoll,5000);
 
 </script>
 </body>
