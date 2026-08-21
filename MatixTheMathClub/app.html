@@ -2451,7 +2451,7 @@ function loadIdeas(){
 /* =====================================================================
    MESSAGES (notifications feed — ported)
    ===================================================================== */
-var TYPE_META={follower:{icon:'➕',color:'#38bdf8',label:'New follower'},joined:{icon:'🎉',color:'#34d399',label:'New member joined'},role:{icon:'🎖',color:'#fbbf24',label:'Role change'},changelog:{icon:'📜',color:'#60a5fa',label:'Changelog update'},comment:{icon:'💬',color:'#a78bfa',label:'Profile comment'},points:{icon:'⭐',color:'#f59e0b',label:'Points'},meme:{icon:'😂',color:'#facc15',label:'Joke / meme'},lesson:{icon:'📚',color:'#22d3ee',label:'New lesson'},deleted:{icon:'🗑',color:'#f87171',label:'User removed'},points_request:{icon:'📊',color:'#f59e0b',label:'Point requests to approve'},approval_request:{icon:'📝',color:'#facc15',label:'Requests to approve'},chat:{icon:'💬',color:'#00a884',label:'Chat message'}};
+var TYPE_META={follower:{icon:'➕',color:'#38bdf8',label:'New follower'},joined:{icon:'🎉',color:'#34d399',label:'New member joined'},role:{icon:'🎖',color:'#fbbf24',label:'Role change'},changelog:{icon:'📜',color:'#60a5fa',label:'Changelog update'},comment:{icon:'💬',color:'#a78bfa',label:'Profile comment'},points:{icon:'⭐',color:'#f59e0b',label:'Points'},meme:{icon:'😂',color:'#facc15',label:'Joke / meme'},lesson:{icon:'📚',color:'#22d3ee',label:'New lesson'},deleted:{icon:'🗑',color:'#f87171',label:'User removed'},quiz_result:{icon:'🎯',color:'#10b981',label:'Quiz completed (Award points)'},points_request:{icon:'📊',color:'#f59e0b',label:'Point requests to approve'},approval_request:{icon:'📝',color:'#facc15',label:'Requests to approve'},chat:{icon:'💬',color:'#00a884',label:'Chat message'}};
 var NOTIF_ORDER=['follower','joined','role','changelog','comment','points','meme','lesson','deleted','points_request','approval_request','chat'];
 var MSG_CHIPS=[{id:'all',label:'All',types:null},{id:'follower',label:'Follows',types:['follower']},{id:'joined',label:'Members',types:['joined']},{id:'comment',label:'Comments',types:['comment']},{id:'role',label:'Roles',types:['role','approval_request']},{id:'points',label:'Points',types:['points','points_request']},{id:'meme',label:'Memes',types:['meme']},{id:'lesson',label:'Lessons',types:['lesson']},{id:'changelog',label:'Updates',types:['changelog']}];
 var msgFilter='all',msgEvents=[],msgProfiles={},msgPrefs={},msgSeen=0,msgOwner=false,msgApprove=false;
@@ -2515,6 +2515,26 @@ function drawMsgList(c){
     else if(e.body){var d=el('div','nd');d.textContent=e.body;body.appendChild(d);}
     var t=el('div','nt');t.textContent=timeAgo(e.at);body.appendChild(t);
     /* owner / approver actions */
+    if(e.type==='quiz_result'&&msgOwner){
+      var qAdd=el('button','btn sm','+ ⭐ Give Points');qAdd.style.marginTop='8px';qAdd.style.marginRight='6px';
+      qAdd.onclick=function(){
+        var u=e.user||e.targetUser;
+        var pts=prompt('How many points to award @'+u+' for completing the quiz on "'+(e.topic||'Math Learn')+'" (Score: '+(e.score||'100%')+')?', '15');
+        if(pts&&!isNaN(parseInt(pts,10))){
+          var num=parseInt(pts,10);
+          fbGet('/points/'+encodeURIComponent(u)).then(function(cur){
+            var nv=Math.max(0,(cur||0)+num);
+            fbPut('/points/'+encodeURIComponent(u),nv).then(function(){
+              fbDel('/notifications/ghadi/'+encodeURIComponent(e.notifKey)).then(function(){
+                toast('Awarded +'+num+' points to @'+u+'!','ok');
+                renderMessages(c);
+              });
+            });
+          });
+        }
+      };
+      body.appendChild(qAdd);
+    }
     if(e.type==='points_request'&&msgApprove&&e.requestId){var a=el('button','btn sm',' ✓ Approve');a.style.marginTop='8px';a.style.marginRight='6px';a.onclick=function(){approvePoints(e,a,c);};var r=el('button','btn sm danger','✕ Deny');r.style.marginTop='8px';r.onclick=function(){fbPut('/point_requests/'+encodeURIComponent(e.requestId)+'/status','rejected');fbDel('/notifications/ghadi/'+encodeURIComponent(e.notifKey)).then(function(){renderMessages(c);});};body.appendChild(a);body.appendChild(r);}
     if(e.type==='deleted'&&msgOwner&&e.user){var rv=el('button','btn sm danger','↩ Revert deletion');rv.style.marginTop='8px';rv.onclick=function(){revertDeletion(e.user,rv,c);};body.appendChild(rv);}
     item.appendChild(body);list.appendChild(item);
@@ -8547,7 +8567,7 @@ function lxRenderStart(c){
      +'<h1>'+esc(tr('Math Learn'))+'</h1>'
      +'<p>'+esc(tr("Type anything you want to learn. The Matix AI checks Ghadi's lessons, searches trusted sites, double-checks the facts, then teaches you step by step — with exercises."))+'</p>'
      +'<div class="lb-ask"><div class="lb-ask-ring"></div><div class="lb-ask-in">'
-       +'<span class="ic">\uD83E\uDDE0</span><input id="lxAsk" placeholder="'+esc(tr('e.g. fractions, solving equations, percentages…'))+'" autocomplete="off">'
+       +'<span class="ic">\uD83E\uDDE0</span><input id="lxAsk" placeholder="'+esc(tr('ANYTHING! minecraft, potatoes, volcanoes, fractions…'))+'" autocomplete="off">'
        +'<button class="go" id="lxGo">'+esc(tr('Teach me'))+'</button>'
      +'</div></div>'
      +'<div class="lx-meta"><span class="lx-pill hot">\u26A1 '+esc(tr('instant if someone learned it before'))+'</span><span class="lx-pill">\uD83D\uDC51 '+esc(tr('uses owner lessons'))+'</span><span class="lx-pill">\uD83D\uDD12 '+esc(tr('double-checked sources'))+'</span></div>'
@@ -9214,9 +9234,9 @@ function lxBuildLesson(topic,onStage){
         steps.push({title:'Start with the idea',body:facts[0]});
         if(facts[1])steps.push({title:'A little deeper',body:facts[1]});
         if(facts[2])steps.push({title:'One more piece',body:facts.slice(2,4).join(' ')});
-        steps.push({title:'Try it yourself',body:'Scroll down and try the practice — learning math means doing math!'});
+        steps.push({title:'Try it yourself',body:'Scroll down and try the practice — learning means doing!'});
       }else{
-        steps=[{title:'Start here',body:'This is a math topic — and every math topic starts with small, friendly steps.'},{title:'Practice makes progress',body:'Try the warm-up exercises below, then ask the owner to add a lesson about "'+topic+'" for the club.'}];
+        steps=[{title:'Start here',body:'Every topic starts with small, friendly steps — math, games, science, anything!'},{title:'Practice makes progress',body:'Try the warm-up exercises below, then ask the owner to add a lesson about "'+topic+'" for the club.'}];
       }
       lesson={emoji:'📘',title:topic.charAt(0).toUpperCase()+topic.slice(1),intro:facts[0]||('Let\u2019s explore '+topic+' one small step at a time.'),steps:steps,examples:[],mistakes:['Rushing — slow is smooth, smooth is fast.','Skipping steps — every line matters.','Not checking the answer at the end.'],glossary:[],exercises:lxGenericExercises(topic,facts)};
     }
@@ -9260,7 +9280,7 @@ function lxRenderStart(c){
    +'<h1>'+esc(tr('Math Learn'))+'</h1>'
    +'<p>'+esc(tr('Type anything you want to learn. Matix checks the owner\u2019s lessons, reads trusted sources, double-checks the facts, then teaches you step by step — with exercises.'))+'</p>'
    +'<div class="lb-ask"><div class="lb-ask-ring"></div><div class="lb-ask-in">'
-   +'<span class="ic">🧠</span><input id="lxTopic" placeholder="'+esc(tr('e.g. fractions, solving equations, percentages…'))+'" autocomplete="off">'
+   +'<span class="ic">🧠</span><input id="lxTopic" placeholder="'+esc(tr('ANYTHING! minecraft, potatoes, volcanoes, fractions…'))+'" autocomplete="off">'
    +'<button class="go" id="lxGo">'+esc(tr('Teach me'))+'</button></div></div>'
    +'<div class="lx-meta">'
    +'<span class="lx-pill hot">⚡ '+esc(tr('instant if someone learned it before'))+'</span>'
@@ -9594,7 +9614,7 @@ function renderAI(c){
   function paintAll(){
     scroll.innerHTML='';
     if(!MXAI_LOG.length){
-      MXAI_LOG.push({who:'ai',html:'\uD83D\uDC4B '+esc(tr('Hey! I\u2019m the Matix AI — a math brain the club built itself, right inside this app. Solve, calculate, explain — and teach me: /teach question = answer, then /show mem to see everything the club taught me!'))});
+      MXAI_LOG.push({who:'ai',html:'\uD83D\uDC4B '+esc(tr('Hey! I\u2019m the Matix AI — built by the club, living right inside this app. I know 13,000+ facts (type /brain for proof), solve any math, search the live web with /web, and learn whatever you /teach me. Ask me ANYTHING!'))});
       mxaiSave();
     }
     MXAI_LOG.forEach(function(m){bubble(m.who,m.html);});
@@ -10024,7 +10044,7 @@ var MXAI_FACTS=[
  'A \u201cgoogol\u201d is 10\u00b9\u2070\u2070 \u2014 more than the atoms in the observable universe.',
  'The equals sign = was invented in 1557 because a mathematician was tired of writing \u201cis equal to\u201d.'
 ];
-MXAI_CHIPS=['/teach what is our motto = math is power','/show mem','solve 2x + 5 = 13','\u221a144','area of circle radius 5','next in 2, 4, 8, 16','roll a dice'];
+MXAI_CHIPS=['what is a potato','how to play minecraft','capital of Japan','47 in roman','/web black holes','solve 2x + 5 = 13','what is photosynthesis','capital of France'];
 
 var MXCONV={km:['len',1000],kilometer:['len',1000],kilometre:['len',1000],mile:['len',1609.344],mi:['len',1609.344],m:['len',1],meter:['len',1],metre:['len',1],ft:['len',0.3048],foot:['len',0.3048],feet:['len',0.3048],cm:['len',0.01],mm:['len',0.001],inch:['len',0.0254],inche:['len',0.0254],'in':['len',0.0254],kg:['mass',1000],kilogram:['mass',1000],lb:['mass',453.592],pound:['mass',453.592],g:['mass',1],gram:['mass',1],oz:['mass',28.3495],ounce:['mass',28.3495],l:['vol',1],liter:['vol',1],litre:['vol',1],gallon:['vol',3.78541],gal:['vol',3.78541],ml:['vol',0.001],hour:['time',3600],hr:['time',3600],minute:['time',60],min:['time',60],second:['time',1],sec:['time',1],day:['time',86400],week:['time',604800]};
 function mx4Unit(u){u=String(u||'').toLowerCase();if(MXCONV[u])return u;if(u.slice(-1)==='s'&&MXCONV[u.slice(0,-1)])return u.slice(0,-1);if(u==='feet')return 'foot';return null;}
@@ -10916,7 +10936,7 @@ function mxmemCommand(qRaw){
     return mxmemShow();
   }
   if(/^\/?(help|commands?)$/.test(low)){
-    return '\uD83E\uDDE0 <b>Brain commands</b><br>\u2022 <code>/teach question = answer</code><br>\u2022 <code>/teach Friday is pizza day</code><br>\u2022 <code>/show mem</code><br>\u2022 <code>/forget &lt;thing&gt;</code> \u00b7 <code>/forget all</code><br><small>Whatever you teach me is shared with every club member\u2019s app.</small>';
+    return '\uD83E\uDDE0 <b>Brain commands</b><br>\u2022 <code>/teach question = answer</code><br>\u2022 <code>/teach Friday is pizza day</code><br>\u2022 <code>/show mem</code><br>\u2022 <code>/forget &lt;thing&gt;</code> \u00b7 <code>/forget all</code><br>\u2022 <code>/web black holes</code> \u2014 live web search<br>\u2022 <code>/brain</code> \u2014 see how much I know<br><small>Whatever you teach me is shared with every club member\u2019s app.</small>';
   }
   m=raw.match(/^\/?forget\s+([\s\S]+)$/i);
   if(m){
@@ -10971,6 +10991,703 @@ try{
       if(hit)return mxmemEsc(hit.a)+'<br><small>\uD83E\uDDE0 '+mxmemEsc(hit.by||'the club')+' taught me this \u00b7 <code>/show mem</code></small>';
     }catch(e){}
     return _mxmemPrev.apply(null,arguments);
+  };
+}catch(e){}
+
+
+/* =====================================================================
+   MATIX MEGA BRAIN - PART 1: exact data (elements, capitals, states,
+   planets, months, acronyms). 100% inside the app, works offline.
+   ===================================================================== */
+var MXKB_EL="H|Hydrogen|1;He|Helium|2;Li|Lithium|3;Be|Beryllium|4;B|Boron|5;C|Carbon|6;N|Nitrogen|7;O|Oxygen|8;F|Fluorine|9;Ne|Neon|10;Na|Sodium|11;Mg|Magnesium|12;Al|Aluminium|13;Si|Silicon|14;P|Phosphorus|15;S|Sulfur|16;Cl|Chlorine|17;Ar|Argon|18;K|Potassium|19;Ca|Calcium|20;Sc|Scandium|21;Ti|Titanium|22;V|Vanadium|23;Cr|Chromium|24;Mn|Manganese|25;Fe|Iron|26;Co|Cobalt|27;Ni|Nickel|28;Cu|Copper|29;Zn|Zinc|30;Ga|Gallium|31;Ge|Germanium|32;As|Arsenic|33;Se|Selenium|34;Br|Bromine|35;Kr|Krypton|36;Rb|Rubidium|37;Sr|Strontium|38;Y|Yttrium|39;Zr|Zirconium|40;Nb|Niobium|41;Mo|Molybdenum|42;Tc|Technetium|43;Ru|Ruthenium|44;Rh|Rhodium|45;Pd|Palladium|46;Ag|Silver|47;Cd|Cadmium|48;In|Indium|49;Sn|Tin|50;Sb|Antimony|51;Te|Tellurium|52;I|Iodine|53;Xe|Xenon|54;Cs|Caesium|55;Ba|Barium|56;La|Lanthanum|57;Ce|Cerium|58;Pr|Praseodymium|59;Nd|Neodymium|60;Pm|Promethium|61;Sm|Samarium|62;Eu|Europium|63;Gd|Gadolinium|64;Tb|Terbium|65;Dy|Dysprosium|66;Ho|Holmium|67;Er|Erbium|68;Tm|Thulium|69;Yb|Ytterbium|70;Lu|Lutetium|71;Hf|Hafnium|72;Ta|Tantalum|73;W|Tungsten|74;Re|Rhenium|75;Os|Osmium|76;Ir|Iridium|77;Pt|Platinum|78;Au|Gold|79;Hg|Mercury|80;Tl|Thallium|81;Pb|Lead|82;Bi|Bismuth|83;Po|Polonium|84;At|Astatine|85;Rn|Radon|86;Fr|Francium|87;Ra|Radium|88;Ac|Actinium|89;Th|Thorium|90;Pa|Protactinium|91;U|Uranium|92;Np|Neptunium|93;Pu|Plutonium|94;Am|Americium|95;Cm|Curium|96;Bk|Berkelium|97;Cf|Californium|98;Es|Einsteinium|99;Fm|Fermium|100;Md|Mendelevium|101;No|Nobelium|102;Lr|Lawrencium|103;Rf|Rutherfordium|104;Db|Dubnium|105;Sg|Seaborgium|106;Bh|Bohrium|107;Hs|Hassium|108;Mt|Meitnerium|109;Ds|Darmstadtium|110;Rg|Roentgenium|111;Cn|Copernicium|112;Nh|Nihonium|113;Fl|Flerovium|114;Mc|Moscovium|115;Lv|Livermorium|116;Ts|Tennessine|117;Og|Oganesson|118";
+var MXKB_CAP="afghanistan:Kabul;albania:Tirana;algeria:Algiers;argentina:Buenos Aires;armenia:Yerevan;australia:Canberra;austria:Vienna;azerbaijan:Baku;bahrain:Manama;bangladesh:Dhaka;belgium:Brussels;brazil:Brasilia;bulgaria:Sofia;cambodia:Phnom Penh;cameroon:Yaounde;canada:Ottawa;chile:Santiago;china:Beijing;colombia:Bogota;costa rica:San Jose;croatia:Zagreb;cuba:Havana;cyprus:Nicosia;czech republic:Prague;czechia:Prague;denmark:Copenhagen;ecuador:Quito;egypt:Cairo;estonia:Tallinn;ethiopia:Addis Ababa;finland:Helsinki;france:Paris;georgia:Tbilisi;germany:Berlin;ghana:Accra;greece:Athens;hungary:Budapest;iceland:Reykjavik;india:New Delhi;indonesia:Jakarta;iran:Tehran;iraq:Baghdad;ireland:Dublin;italy:Rome;jamaica:Kingston;japan:Tokyo;jordan:Amman;kazakhstan:Astana;kenya:Nairobi;kuwait:Kuwait City;latvia:Riga;lebanon:Beirut;libya:Tripoli;lithuania:Vilnius;luxembourg:Luxembourg City;malaysia:Kuala Lumpur;mexico:Mexico City;morocco:Rabat;nepal:Kathmandu;netherlands:Amsterdam;new zealand:Wellington;nigeria:Abuja;north korea:Pyongyang;norway:Oslo;oman:Muscat;pakistan:Islamabad;palestine:Ramallah (seat of government);peru:Lima;philippines:Manila;poland:Warsaw;portugal:Lisbon;qatar:Doha;romania:Bucharest;russia:Moscow;saudi arabia:Riyadh;senegal:Dakar;serbia:Belgrade;singapore:Singapore;slovakia:Bratislava;slovenia:Ljubljana;somalia:Mogadishu;south africa:Pretoria (executive; Cape Town makes laws, Bloemfontein has the courts);south korea:Seoul;spain:Madrid;sri lanka:Sri Jayawardenepura Kotte (Colombo is the commercial capital);sudan:Khartoum;sweden:Stockholm;switzerland:Bern;syria:Damascus;thailand:Bangkok;tunisia:Tunis;turkey:Ankara;turkiye:Ankara;uae:Abu Dhabi;united arab emirates:Abu Dhabi;uganda:Kampala;uk:London;united kingdom:London;england:London;ukraine:Kyiv;usa:Washington, D.C.;united states:Washington, D.C.;america:Washington, D.C.;us:Washington, D.C.;uruguay:Montevideo;uzbekistan:Tashkent;venezuela:Caracas;vietnam:Hanoi;yemen:Sanaa;zimbabwe:Harare;bolivia:Sucre (official) and La Paz (seat of government);israel:Jerusalem (proclaimed; most embassies are in Tel Aviv)";
+var MXKB_US="alabama:Montgomery;alaska:Juneau;arizona:Phoenix;arkansas:Little Rock;california:Sacramento;colorado:Denver;connecticut:Hartford;delaware:Dover;florida:Tallahassee;georgia:Atlanta;hawaii:Honolulu;idaho:Boise;illinois:Springfield;indiana:Indianapolis;iowa:Des Moines;kansas:Topeka;kentucky:Frankfort;louisiana:Baton Rouge;maine:Augusta;maryland:Annapolis;massachusetts:Boston;michigan:Lansing;minnesota:Saint Paul;mississippi:Jackson;missouri:Jefferson City;montana:Helena;nebraska:Lincoln;nevada:Carson City;new hampshire:Concord;new jersey:Trenton;new mexico:Santa Fe;new york:Albany;north carolina:Raleigh;north dakota:Bismarck;ohio:Columbus;oklahoma:Oklahoma City;oregon:Salem;pennsylvania:Harrisburg;rhode island:Providence;south carolina:Columbia;south dakota:Pierre;tennessee:Nashville;texas:Austin;utah:Salt Lake City;vermont:Montpelier;virginia:Richmond;washington:Olympia;west virginia:Charleston;wisconsin:Madison;wyoming:Cheyenne";
+var MXKB_PLANETS=[
+["Mercury",1,"rocky planet","0 moons","the smallest planet and the closest to the Sun - a year there lasts just 88 Earth days"],
+["Venus",2,"rocky planet","0 moons","the hottest planet (about 465 C) because its thick atmosphere traps heat - it also spins backwards"],
+["Earth",3,"rocky planet","1 moon (the Moon)","the only known planet with life - about 71% of its surface is covered by water"],
+["Mars",4,"rocky planet","2 small moons (Phobos and Deimos)","the red planet - home to Olympus Mons, the tallest volcano in the solar system"],
+["Jupiter",5,"gas giant","about 95 known moons","the biggest planet - more than 1,300 Earths could fit inside, and its Great Red Spot is a giant storm"],
+["Saturn",6,"gas giant","about 146 known moons","famous for its beautiful rings made of ice and rock"],
+["Uranus",7,"ice giant","about 28 known moons","it spins on its side, like a rolling ball"],
+["Neptune",8,"ice giant","about 16 known moons","the windiest planet - storms there can blow over 2,000 km/h"]
+];
+var MXKB_MONTHS="january:31;february:28 (29 in a leap year);march:31;april:30;may:31;june:30;july:31;august:31;september:30;october:31;november:30;december:31";
+var MXKB_ACR="cpu:Central Processing Unit - the brain of a computer that runs instructions;gpu:Graphics Processing Unit - the chip that draws images and powers games;ram:Random Access Memory - fast short-term memory a computer uses while working;rom:Read-Only Memory - permanent memory that keeps its data without power;usb:Universal Serial Bus - the standard plug for connecting devices;url:Uniform Resource Locator - the address of a page on the web;www:World Wide Web - the system of linked pages on the internet;http:HyperText Transfer Protocol - the rules browsers use to fetch web pages;https:HTTP Secure - the safe, encrypted version of HTTP;html:HyperText Markup Language - the language web pages are written in;css:Cascading Style Sheets - the language that styles and colors web pages;gps:Global Positioning System - satellites that tell you exactly where you are;sms:Short Message Service - classic phone text messages;pdf:Portable Document Format - a file format that looks the same everywhere;atm:Automated Teller Machine - the cash machine at the bank;nasa:National Aeronautics and Space Administration - the USA space agency;laser:Light Amplification by Stimulated Emission of Radiation;radar:Radio Detection and Ranging - finds objects using radio waves;scuba:Self-Contained Underwater Breathing Apparatus;lol:laughing out loud;brb:be right back;faq:Frequently Asked Questions;diy:Do It Yourself;ceo:Chief Executive Officer - the boss of a company;vip:Very Important Person;tv:television;dvd:Digital Versatile Disc;led:Light-Emitting Diode - a tiny efficient light;lcd:Liquid Crystal Display - the screen technology in many monitors;ai:Artificial Intelligence - computer programs that can learn and solve problems;vr:Virtual Reality - a computer world you see through a headset;ar:Augmented Reality - digital things added on top of the real world;iq:Intelligence Quotient - a score from a thinking-skills test;ufo:Unidentified Flying Object;dna:DeoxyriboNucleic Acid - the molecule carrying the instructions for life;rna:RiboNucleic Acid - the molecule that helps read DNA instructions;wifi:wireless networking that connects devices to the internet without cables;gif:Graphics Interchange Format - image format used for short looping animations;jpg:JPEG image format - compressed photos;mp3:a compressed audio file format;asap:as soon as possible";
+
+/* MATIX MEGA BRAIN - PART 2: club encyclopedia A (tech, games, science, space) */
+var MXKB_PEDIA={
+"minecraft":"Minecraft is a sandbox video game created by Markus Persson (Notch) and released by Mojang in 2011 - the best-selling video game ever. You explore a blocky world, mine resources, craft tools and build anything. HOW TO PLAY: 1) Punch trees to collect wood. 2) Craft planks, sticks and a crafting table. 3) Make a wooden pickaxe, mine stone, upgrade to stone tools. 4) Build a shelter and a bed before night, because zombies, skeletons and creepers come out in the dark. 5) Mine iron, then diamonds, farm food, explore caves and villages. Survival mode has health and hunger; Creative mode gives unlimited blocks and flying. The big end goal: defeat the Ender Dragon in the End dimension!",
+"roblox":"Roblox is an online platform (2006) where players make and share their own games, called experiences, using Roblox Studio and the Lua coding language. You play with an avatar, join friends, and can even publish your own game for millions of players. Its virtual money is called Robux.",
+"fortnite":"Fortnite is a battle royale game by Epic Games (2017). Up to 100 players drop onto an island, collect weapons and materials, build walls and ramps, and fight until one player or team remains while a storm shrinks the map. Its money is V-Bucks and it is famous for dances and live in-game events.",
+"chess":"Chess is a 1,500-year-old strategy game for two players on an 8x8 board of 64 squares. Each side has 16 pieces: 8 pawns, 2 rooks, 2 knights, 2 bishops, a queen and a king. HOW TO PLAY: pawns move forward 1 square (2 on their first move) and capture diagonally; rooks move in straight lines; bishops move diagonally; the queen does both; knights jump in an L-shape; the king moves 1 square. You win by checkmate - trapping the enemy king so it cannot escape capture.",
+"checkers":"Checkers (draughts) is a board game on the dark squares of an 8x8 board. Pieces slide diagonally forward one square and capture by jumping over an enemy piece. Reach the far row and your piece becomes a king that can also move backwards. Capture all enemy pieces to win.",
+"uno":"UNO is a card game (1971) where you match the top card of the pile by color or number. Action cards like Skip, Reverse, Draw Two and Wild spice it up. When you have one card left you must shout UNO! First player to empty their hand wins the round.",
+"video game":"A video game is an electronic game played on computers, consoles or phones. Genres include platformers, shooters, puzzles, racing, sandbox and strategy. The first big hit was Pong (1972); today gaming is the biggest entertainment industry on Earth.",
+"pokemon":"Pokemon is a Japanese franchise (1996) by Nintendo and Game Freak where trainers catch, train and battle creatures called Pokemon. Pikachu is the mascot, and the games, cards, and shows follow the motto: gotta catch em all! There are over 1,000 species now.",
+"mario":"Mario is Nintendo's mustached plumber hero, created by Shigeru Miyamoto in 1981. He stars in the best-known platform games ever (Super Mario Bros, Mario Kart, Mario Odyssey), usually rescuing Princess Peach from the villain Bowser.",
+"tetris":"Tetris is a puzzle game created in 1984 by Russian programmer Alexey Pajitnov. Falling blocks called tetrominoes must be rotated to complete full lines, which then disappear. It is one of the most ported games in history.",
+"among us":"Among Us (2018, by Innersloth) is a party game where crewmates do tasks on a spaceship while secret impostors try to eliminate them. Players hold meetings, discuss suspicions and vote someone out - lying and detective skills decide who wins.",
+"youtube":"YouTube is the biggest video-sharing website, created in 2005 and owned by Google. Anyone can upload videos, subscribe to channels and comment. Over 2 billion people use it every month, and its most subscribed channels have hundreds of millions of fans.",
+"google":"Google is the most used search engine, started in 1998 by Larry Page and Sergey Brin at Stanford. It sorts billions of web pages by ranking how pages link to each other. Google also makes Android, Chrome, Gmail, Maps and YouTube.",
+"internet":"The internet is a worldwide network of connected computers that talk using shared rules (protocols). It began as ARPANET in 1969. The web (websites and pages) runs on top of it - and so do email, games and video calls. Data travels through cables, including huge ones under the oceans.",
+"computer":"A computer is a machine that follows instructions (programs) to process information. Its main parts: the CPU (brain), RAM (working memory), storage (long-term memory), and input/output like keyboard, mouse and screen. Everything it does is built from tiny switches called transistors - modern chips hold billions of them.",
+"smartphone":"A smartphone is a pocket computer with a phone inside. It combines camera, GPS, internet, apps and games. The modern era began with the iPhone in 2007; today most phones run either iOS (Apple) or Android (Google).",
+"robot":"A robot is a machine that can carry out tasks by itself, guided by computer programs and sensors. Robots build cars, explore Mars (like NASA's rovers), vacuum floors and deliver packages. The word comes from the Czech word robota, meaning forced work.",
+"artificial intelligence":"Artificial intelligence (AI) is the science of making computers do things that normally need human thinking - recognizing pictures, understanding language, playing games, solving problems. Modern AI learns patterns from huge amounts of examples instead of being told every rule. The Matix AI you are talking to is a small hand-coded AI living right inside this app!",
+"machine learning":"Machine learning is the part of AI where computers learn from examples instead of fixed rules. Show a model thousands of cat photos and it learns to spot cats. It powers recommendations, translators, voice assistants and self-driving cars.",
+"algorithm":"An algorithm is a step-by-step recipe for solving a problem - like a cooking recipe, but for computers (or people!). Long division is an algorithm. Good algorithms are correct, clear and fast.",
+"programming":"Programming (coding) is writing instructions that computers follow, in languages like Python, JavaScript or Kotlin. Programmers break big problems into small steps, write the steps as code, test them and fix bugs. This whole Matix app was programmed in HTML, CSS and JavaScript!",
+"python":"Python is one of the most popular programming languages, created by Guido van Rossum in 1991. It is famous for reading almost like English, which makes it great for beginners - and powerful enough for AI, science and websites. It is named after Monty Python, not the snake!",
+"javascript":"JavaScript is the programming language of the web - it makes pages interactive. Every button, animation and game in this very Matix app runs on JavaScript inside your device. Despite the name, it is not related to Java.",
+"website":"A website is a collection of pages on the internet, written in HTML (structure), CSS (style) and JavaScript (behavior), stored on computers called servers. When you type an address, your browser downloads the page and draws it on screen.",
+"email":"Email (electronic mail) lets you send messages over the internet in seconds. Invented by Ray Tomlinson in 1971 - he also chose the @ symbol for addresses. An address is name@place, like club@matixthemathclub.com.",
+"password":"A password is a secret that proves an account is yours. Strong passwords are long (12+ characters), mix letters, numbers and symbols, and are never reused between sites. Never share your password - not even with friends!",
+"hacker":"A hacker is someone who explores how computer systems work. Bad hackers break in to steal data; good hackers (called white hats) find security holes so they can be fixed. Strong passwords and updates keep most attacks out.",
+"bitcoin":"Bitcoin is the first cryptocurrency - digital money with no bank, invented in 2008 by the mysterious Satoshi Nakamoto. Transactions are recorded on a shared public ledger called the blockchain, kept honest by thousands of computers worldwide.",
+"drone":"A drone is a flying robot, usually with 4 propellers (a quadcopter), controlled remotely or flying itself with GPS. Drones film movies, inspect buildings, deliver packages and help farmers watch crops.",
+"tesla":"Tesla is an American company (2003) that makes electric cars, batteries and solar panels, led by Elon Musk. It is named after Nikola Tesla, the inventor who pioneered the alternating-current electricity we use today.",
+"spacex":"SpaceX is a rocket company founded by Elon Musk in 2002. It made history with reusable rockets that land themselves, launched astronauts for NASA, and is building Starship - the biggest rocket ever - to one day reach Mars.",
+"nasa":"NASA is the United States space agency, founded in 1958. It landed people on the Moon (Apollo 11, 1969), runs Mars rovers, space telescopes like Hubble and James Webb, and studies Earth from orbit.",
+"atom":"An atom is the tiniest piece of an element that still is that element. It has a nucleus of protons (+) and neutrons, with electrons (-) buzzing around it. Atoms are mostly empty space, and everything around you is made of them. About 5 million hydrogen atoms could line up across the width of one hair!",
+"molecule":"A molecule is two or more atoms bonded together. Water is H2O - two hydrogen atoms and one oxygen. Molecules can be tiny (oxygen, O2) or gigantic (DNA has billions of atoms).",
+"gravity":"Gravity is the force that pulls masses toward each other. It keeps you on the ground, the Moon around Earth, and Earth around the Sun. Isaac Newton described its rules in 1687, and Einstein later explained it as the bending of space and time. On Earth it accelerates falling things at about 9.8 m/s each second.",
+"energy":"Energy is the ability to make things happen - move, heat, light or change stuff. It comes in forms like motion (kinetic), stored (potential), heat, light, sound, chemical and electrical. It is never created or destroyed, only converted - that is the law of conservation of energy.",
+"electricity":"Electricity is the flow of electrons through a conductor like copper wire. Power stations, solar panels and wind turbines push electrons through the grid to light homes and charge phones. Lightning is a giant natural spark of static electricity.",
+"magnet":"A magnet is an object with a magnetic field that attracts iron, nickel and cobalt. Every magnet has a north and south pole - opposite poles attract, same poles repel. Earth itself is a giant magnet, which is why compasses point north.",
+"light":"Light is electromagnetic energy our eyes can see. It is the fastest thing in the universe - 299,792 km per second. White light is a mix of colors, which is why prisms and raindrops split it into rainbows. Sunlight takes about 8 minutes and 20 seconds to reach Earth.",
+"sound":"Sound is a vibration that travels as waves through air, water or solids - but not through empty space, so space is silent. It travels about 343 m/s in air. Pitch is how fast the vibration is; volume is how strong. Thunder is the sound of lightning heating air so fast it snaps.",
+"photosynthesis":"Photosynthesis is how plants make food: they take carbon dioxide from the air and water from the soil, use sunlight captured by green chlorophyll, and produce sugar plus oxygen. Nearly all the oxygen you breathe was made this way by plants and ocean algae.",
+"cell":"A cell is the smallest living unit - the building block of every living thing. Your body has around 37 trillion of them, each with a nucleus holding DNA, mitochondria making energy, and a membrane holding it together. Bacteria are just one single cell.",
+"dna":"DNA is the molecule that carries the instructions for building and running every living thing. It looks like a twisted ladder (a double helix) with 4 letters: A, T, C, G. Your DNA has about 3 billion letters, and if unraveled from one cell it would be about 2 meters long. You share about 50% of your DNA with a banana!",
+"bacteria":"Bacteria are single-celled microbes, among the oldest life on Earth. Some cause sickness, but most are harmless or helpful - trillions in your gut help digest food, and others make yogurt and cheese. Antibiotics kill bacteria but do nothing against viruses.",
+"virus":"A virus is a tiny package of genetic code in a protein coat - far smaller than a cell. It cannot live on its own: it must enter a living cell and force it to make copies. Colds, flu and COVID-19 are caused by viruses; vaccines teach your immune system to fight them. (A computer virus is different: a program that copies itself to damage or spy on computers.)",
+"evolution":"Evolution is how living things change over many generations. Individuals with helpful traits survive and have more babies, passing those traits on - natural selection. Over millions of years this produced every species, from whales to woodpeckers. Charles Darwin explained it in 1859.",
+"dinosaur":"Dinosaurs were reptiles that ruled Earth for about 165 million years, until an asteroid impact 66 million years ago wiped most of them out. T. rex had a bite three times stronger than a lion; some sauropods were longer than three buses. Birds are living dinosaurs - a chicken is a distant cousin of T. rex!",
+"volcano":"A volcano is an opening in Earth's crust where molten rock (magma) escapes. When it erupts, magma becomes lava, with ash and gas. Most volcanoes sit where tectonic plates meet, like the Pacific Ring of Fire. The biggest known volcano in the solar system is Olympus Mons on Mars.",
+"earthquake":"An earthquake is the ground shaking when huge rock plates in Earth's crust suddenly slip. The energy spreads as seismic waves, measured on the moment magnitude scale - each step means about 32 times more energy. The safest move indoors: drop, cover under something sturdy, and hold on.",
+"tsunami":"A tsunami is a series of giant waves caused by an undersea earthquake, landslide or volcanic eruption. In the open ocean the waves race at jet speed but are low; near shore they slow down and pile up into walls of water. If the sea suddenly pulls back, move to high ground immediately.",
+"hurricane":"A hurricane is a giant rotating storm born over warm ocean water, with winds over 119 km/h. The same storm is called a typhoon in the Pacific and a cyclone in the Indian Ocean. The center - the eye - is strangely calm.",
+"tornado":"A tornado is a violently spinning column of air reaching from a thunderstorm to the ground. The strongest have winds over 480 km/h. Most happen in Tornado Alley in the central USA. Safest place: a basement or an interior room without windows.",
+"rainbow":"A rainbow appears when sunlight enters raindrops, bends, bounces and splits into its colors: red, orange, yellow, green, blue, indigo, violet. You always see it with the Sun behind you - and a full rainbow is actually a complete circle, which pilots sometimes see from planes.",
+"lightning":"Lightning is a giant electric spark between clouds or cloud and ground, about 5 times hotter than the surface of the Sun. Thunder is the shockwave of that heat. Count seconds between flash and boom and divide by 3 to estimate the distance in kilometers.",
+"cloud":"A cloud is billions of tiny water droplets or ice crystals floating in the sky, formed when moist air rises and cools. Fluffy cauliflower clouds are cumulus, flat gray sheets are stratus, wispy high ones are cirrus, and towering storm clouds are cumulonimbus. A medium cloud can weigh as much as 100 elephants - it floats because the droplets are so tiny.",
+"climate change":"Climate change is the long-term warming of Earth caused mostly by burning coal, oil and gas, which adds carbon dioxide to the air and traps heat like a blanket. It melts ice, raises sea levels and makes extreme weather stronger. Fixes include clean energy, efficient transport, protecting forests and wasting less.",
+"recycling":"Recycling turns used materials - paper, glass, metal, some plastics - into new products instead of trash. Recycling one aluminium can saves enough energy to run a TV for about 3 hours, and aluminium can be recycled forever without losing quality.",
+"black hole":"A black hole is a region of space where gravity is so strong that nothing, not even light, can escape once past the event horizon. Most form when giant stars collapse. The first-ever photo of one was taken in 2019, and the Milky Way has a supermassive black hole at its center called Sagittarius A*.",
+"star":"A star is a giant ball of hot gas (mostly hydrogen) that shines by fusing atoms in its core. Stars are born in gas clouds called nebulae, live for millions to billions of years, and end as white dwarfs, neutron stars or black holes. On a dark night you can see a few thousand; our galaxy holds over 100 billion.",
+"sun":"The Sun is our star - a ball of glowing gas holding 99.8% of the solar system's mass. About 1.3 million Earths could fit inside. Its core fuses hydrogen into helium at 15 million C, and its light takes 8 minutes 20 seconds to reach us. It is about 4.6 billion years old, half way through its life.",
+"moon":"The Moon is Earth's only natural satellite, about 384,400 km away - roughly 30 Earths in a row. Its gravity causes our ocean tides. It formed from debris after a Mars-sized body hit young Earth. Twelve astronauts walked on it between 1969 and 1972, and it slowly drifts 3.8 cm farther from us every year.",
+"earth":"Earth is the third planet from the Sun and the only known world with life. It is about 4.5 billion years old, spins once every 24 hours, orbits the Sun every 365.25 days, and is covered 71% by water. Its atmosphere (78% nitrogen, 21% oxygen) and magnetic field protect all living things.",
+"solar system":"The solar system is the Sun plus everything orbiting it: 8 planets (Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune), dwarf planets like Pluto, moons, asteroids and comets. It formed 4.6 billion years ago from a spinning cloud of gas and dust. Remember the planet order: My Very Educated Mother Just Served Us Noodles!",
+"galaxy":"A galaxy is a huge family of stars, gas and dust held together by gravity. Ours, the Milky Way, has over 100 billion stars, and the universe holds something like 2 trillion galaxies. Our neighbor Andromeda will gently merge with the Milky Way in about 4.5 billion years.",
+"universe":"The universe is everything that exists - all space, time, matter and energy. It began about 13.8 billion years ago in the Big Bang and has been expanding ever since. The observable part is about 93 billion light-years across, and most of it is mysterious dark matter and dark energy.",
+"big bang":"The Big Bang is the event that started our universe about 13.8 billion years ago - space itself expanding from an unimaginably hot, dense point. Evidence: galaxies rushing apart and a faint leftover glow called the cosmic microwave background that fills the whole sky.",
+"comet":"A comet is a dirty snowball of ice, dust and rock from the edge of the solar system. When it nears the Sun, it heats up and grows glowing tails that always point away from the Sun. Halley's Comet returns about every 76 years - next visit: 2061.",
+"asteroid":"An asteroid is a rocky object orbiting the Sun, smaller than a planet. Most live in the asteroid belt between Mars and Jupiter. One about 10 km wide ended the dinosaurs 66 million years ago; NASA proved in 2022 that we can nudge one off course by crashing a probe into it.",
+"rocket":"A rocket works by throwing hot gas out of its engines extremely fast - action and reaction, Newton's third law. Unlike jets, rockets carry their own oxygen so they work in space. It takes about 28,000 km/h to stay in orbit around Earth.",
+"satellite":"A satellite is anything orbiting a planet. The Moon is a natural one; thousands of artificial ones handle GPS, weather, TV and internet. The first was Sputnik 1 (1957). Most zoom around Earth at about 7.8 km per second.",
+"astronaut":"An astronaut is a person trained to travel and work in space. In orbit they float because they are in constant free-fall around Earth. On the International Space Station they see 16 sunrises a day, exercise 2 hours daily to protect their bones, and their sense of taste gets weaker!",
+"international space station":"The International Space Station (ISS) is a science lab in orbit 400 km above Earth, flying at 28,000 km/h - one lap around the planet every 90 minutes. Astronauts from many countries have lived there continuously since the year 2000. You can often spot it as a bright moving star at dusk.",
+"telescope":"A telescope gathers light to make far things look close. Galileo first pointed one at the sky in 1609 and found Jupiter's moons. Today the James Webb Space Telescope sees baby galaxies from over 13 billion years ago using infrared light.",
+"microscope":"A microscope magnifies tiny things. Light microscopes reveal cells and bacteria; electron microscopes can show individual atoms. Antonie van Leeuwenhoek used an early one in the 1670s to become the first human to see microbes."
+};
+
+/* MATIX MEGA BRAIN - PART 3: club encyclopedia B (body, food, animals, world, people, life) */
+var MXKB_PEDIA2={
+"potato":"A potato is a starchy root vegetable - the swollen underground stem (called a tuber) of the Solanum tuberosum plant. People first grew potatoes in the Andes mountains of South America thousands of years ago, and Spanish explorers brought them to Europe in the 1500s. Today they are the 4th biggest food crop on Earth. You can boil, bake, mash, roast or fry them - chips and French fries are potatoes! Fun facts: a raw potato is about 80% water, and potatoes were the first vegetable grown in space (1995).",
+"tomato":"A tomato is technically a fruit (it grows from a flower and holds seeds) that we treat as a vegetable. It came from South and Central America and reached Europe in the 1500s - Europeans first feared it was poisonous! Tomatoes are the base of ketchup, pizza sauce and salads, and are full of vitamin C and lycopene.",
+"banana":"A banana is a sweet tropical fruit that grows in huge hanging bunches on giant herbs (not trees - the trunk is tightly rolled leaves!). Bananas are rich in potassium, arrive pre-wrapped in their own peel, and are botanically berries. Almost all supermarket bananas are one variety: the Cavendish.",
+"apple":"An apple is a crunchy fruit from the rose family, first domesticated in Central Asia (Kazakhstan). There are over 7,500 varieties. Apples float because they are about 25% air - that is why apple bobbing works.",
+"honey":"Honey is sweet food made by bees from flower nectar. Bees visit about 2 million flowers to make one jar. Sealed honey basically never spoils - edible honey was found in 3,000-year-old Egyptian tombs. A single bee makes only about 1/12 of a teaspoon in its whole life.",
+"chocolate":"Chocolate is made from roasted, ground seeds of the cacao tree, which grows near the equator. The Maya and Aztecs drank it bitter and even used cacao beans as money. Dark, milk and white chocolate differ in how much cocoa they contain. Never share it with dogs - it is toxic to them.",
+"pizza":"Pizza is a flat bread topped with sauce, cheese and toppings, baked hot and fast. The modern version comes from Naples, Italy - the Margherita (1889) shows the Italian flag: red tomato, white mozzarella, green basil. Around 5 billion pizzas are sold worldwide every year.",
+"bread":"Bread is one of humanity's oldest foods - flour, water and usually yeast, baked. Yeast are tiny living fungi that eat sugar and burp carbon dioxide bubbles, which make the dough rise. Egyptians were baking leavened bread over 4,000 years ago.",
+"rice":"Rice is a grain that feeds more than half the people on Earth, especially across Asia. It grows in flooded fields called paddies. There are two big families - long-grain and short-grain - and over 40,000 varieties.",
+"cheese":"Cheese is made by curdling milk, separating the solid curds, and aging them. There are over 1,800 kinds, from soft mozzarella to hard parmesan. Legend says it was discovered by accident when milk was stored in a pouch made from an animal stomach, whose natural enzymes curdled it.",
+"milk":"Milk is the nutrient-rich liquid mammals make for their babies. Humans drink mostly cow milk - full of calcium, protein and vitamins for bones and muscles. Pasteurization (gentle heating, invented by Louis Pasteur) makes it safe to store.",
+"egg":"An egg is a protein-packed food laid by hens (and used in baking to bind and fluff). The shell has up to 17,000 tiny pores and its color depends on the hen breed, not quality. Fresh eggs sink in water; old ones float.",
+"ice cream":"Ice cream is a frozen dessert of milk, cream, sugar and flavorings, churned while freezing so ice crystals stay tiny and the texture stays smooth. Ancient versions used snow and honey; the cone became famous at the 1904 World's Fair. Vanilla is still the world's favorite flavor.",
+"coffee":"Coffee is a drink brewed from roasted seeds (beans) of the coffee plant, discovered - says legend - by an Ethiopian goat herder whose goats danced after eating the berries. Its caffeine blocks sleepiness signals in the brain. It is one of the most traded products on Earth.",
+"tea":"Tea is the most-drunk beverage on Earth after water - leaves of the Camellia sinensis plant steeped in hot water. Green, black, white and oolong tea all come from the same plant, just processed differently. It began in China thousands of years ago.",
+"brain":"The brain is your body's control center - about 1.4 kg with roughly 86 billion neurons connected by trillions of links. It runs your thoughts, memory, feelings, movement, breathing and heartbeat, and uses about 20% of your energy. It cannot feel pain itself, and sleep is when it files away what you learned - so sleeping well literally makes you better at math!",
+"heart":"The heart is a fist-sized muscle pump that pushes blood around your body about 100,000 times a day - over 2.5 billion beats in a lifetime. The right side sends blood to the lungs for oxygen; the left side sends it everywhere else. Exercise keeps it strong.",
+"lungs":"Lungs are the two spongy organs that pull oxygen from the air into your blood and push out carbon dioxide. Spread flat, their 300+ million tiny air sacs (alveoli) would cover a tennis court. You breathe about 20,000 times a day without thinking.",
+"blood":"Blood is the red delivery service of your body: red cells carry oxygen, white cells fight germs, platelets patch cuts, and plasma carries everything. An adult has about 5 liters. Your blood type (A, B, AB or O) matters for donations - and one donation can save three lives.",
+"skeleton":"Your skeleton is the frame of 206 bones holding you up and protecting your organs - babies start with about 300 that fuse as they grow. Bones are alive: they rebuild themselves and make blood cells in their marrow. The smallest bone is in your ear; the strongest is your thigh bone (femur).",
+"muscles":"Muscles are tissues that contract to move you - you have over 600. Skeletal muscles move bones, the heart is a muscle that never rests, and smooth muscles work your insides. Muscles only pull (never push), which is why they come in pairs like biceps and triceps.",
+"eyes":"Eyes turn light into signals your brain reads as images. Light enters through the pupil, the lens focuses it onto the retina, and rod cells see dim light while cone cells see color. Your eyes can tell apart millions of colors, and you blink about 15-20 times a minute.",
+"teeth":"Teeth cut and grind food: adults have 32 (with wisdom teeth), kids have 20 baby teeth first. The outer enamel is the hardest substance your body makes - but sugar-eating bacteria produce acid that drills cavities in it, so brush twice a day.",
+"vaccine":"A vaccine is a training course for your immune system: a safe piece or copy of a germ teaches your body to recognize and destroy the real one before you get sick. Vaccines wiped out smallpox and nearly ended polio - among the greatest lifesavers in history.",
+"exercise":"Exercise is moving your body to keep it strong: it builds muscles and bones, strengthens your heart, boosts mood chemicals, and even helps memory and focus - kids who move regularly often learn faster. Aim for about an hour of active play or sport a day.",
+"sleep":"Sleep is when your body repairs itself and your brain sorts and stores what you learned that day. School-age kids need 9-11 hours. In deep sleep you cycle into REM, where most dreams happen. Skipping sleep makes memory, mood and math all worse!",
+"dog":"The dog was the first animal humans ever tamed - descended from wolves at least 15,000 years ago. Dogs smell 10,000+ times better than us, understand human gestures better than almost any animal, and each nose print is unique like a fingerprint. There are over 300 breeds, from chihuahuas to great danes.",
+"cat":"Cats were tamed around 9,000 years ago, probably because they hunted mice in grain stores. They sleep 12-16 hours a day, purr at a frequency that may even help healing, can squeeze through any gap their whiskers fit, and their nose print is unique. Ancient Egyptians adored them.",
+"lion":"The lion is a big cat living in family groups called prides - the only truly social cat. Females do most hunting; a male's roar carries 8 km. Despite the nickname king of the jungle, lions live on African savannas (plus one forest in India).",
+"tiger":"The tiger is the biggest cat on Earth - up to 300 kg. Every tiger's stripes are unique, and even its skin is striped. Unlike most cats it loves swimming. Tigers are endangered: only a few thousand remain in the wild, mostly in India.",
+"cheetah":"The cheetah is the fastest land animal: 0 to 100 km/h in about 3 seconds, topping 110 km/h - but only for short sprints. Its claws grip like running spikes and its tail steers like a rudder. Unlike other big cats, it cannot roar; it chirps like a bird!",
+"elephant":"The elephant is the largest land animal - African males can weigh 6,000 kg. Its trunk has tens of thousands of muscles and can lift a log or pick up a peanut. Elephants live in herds led by a grandmother, remember friends for decades, and comfort each other - they are among the smartest animals alive.",
+"giraffe":"The giraffe is the tallest animal - up to 5.5 meters - yet its neck has just 7 vertebrae, same as yours (each is huge!). Its heart is powerful enough to pump blood all the way up, its tongue is about 50 cm and dark to avoid sunburn, and it sleeps only a few hours a day, mostly standing.",
+"blue whale":"The blue whale is the largest animal that has EVER lived - bigger than any dinosaur: up to 30 meters and 180,000 kg. Its heart is the size of a small car, its tongue can weigh as much as an elephant, yet it eats tiny shrimp-like krill - about 4 tons a day. Its calls are louder than a jet engine.",
+"dolphin":"Dolphins are super-smart ocean mammals that breathe air, use echolocation (sound sonar) to see with their ears, call each other by name with signature whistles, and sleep with half their brain at a time so they never drown. They live in pods and love to surf boat waves.",
+"shark":"Sharks have ruled the oceans for over 400 million years - older than trees and dinosaurs! They have skeletons of cartilage (like your nose), endless rows of replaceable teeth, and can sense the tiny electricity of hidden prey. Most sharks are harmless to humans, and many species need protection.",
+"penguin":"Penguins are birds that traded flying for swimming - underwater they fly, reaching 10-30 km/h. They live almost all in the Southern Hemisphere (none at the North Pole!). Emperor penguin dads balance the egg on their feet through the Antarctic winter for two months without eating.",
+"eagle":"Eagles are powerful birds of prey with eyesight 4-8 times sharper than a human's - they can spot a rabbit from over a kilometer. The bald eagle (USA's symbol) builds the biggest nests of any bird, some weighing more than a car.",
+"owl":"Owls are night hunters with silent feathers, super hearing (some have lopsided ears to pinpoint sound in 3D) and eyes so big they cannot move - that is why an owl turns its head up to 270 degrees. A group of owls is called a parliament. The Matix Learn owl approves!",
+"bee":"Bees are the world's most important pollinators - about a third of every plate of food depends on them. A hive is one queen, thousands of worker sisters and a few drones. Bees dance (the waggle dance) to tell each other where flowers are, and can recognize human faces.",
+"ant":"Ants are tiny but mighty: some carry 50 times their body weight - like you lifting a car. They live in colonies with a queen, farmers (some grow fungus!), soldiers and builders, and talk by smell (pheromones). All ants on Earth together may outweigh all wild birds and mammals combined.",
+"butterfly":"A butterfly starts life as a caterpillar, then rebuilds its whole body inside a chrysalis - metamorphosis - and comes out with wings covered in tiny colored scales. Butterflies taste with their feet, and monarchs migrate thousands of kilometers to the exact same forests every year.",
+"octopus":"The octopus is an ocean genius with 8 arms, 3 hearts, blue blood and about 500 million neurons - most of them in its arms, so each arm can think a little on its own. It changes color and texture in a blink to vanish, squeezes through any gap bigger than its beak, and can open jars.",
+"snake":"Snakes are legless reptiles that smell with their forked tongues and swallow food whole - their jaws stretch around prey bigger than their head. They cannot hear well but feel vibrations. Most snakes are harmless; they shed their skin in one piece as they grow.",
+"panda":"The giant panda is a bear from the mountain forests of China that eats almost nothing but bamboo - up to 12-38 kg a day, chewing for 12+ hours. It has a special wrist bone that works like a thumb. Pandas are a global symbol of wildlife protection, and wild numbers are slowly rising.",
+"kangaroo":"Kangaroos are Australian marsupials: babies (joeys) are born tiny as a jellybean and grow in the mother's pouch. They hop up to 9 meters in one bound, use their tail as a fifth leg, and cannot walk backwards.",
+"camel":"Camels are desert specialists: their humps store fat (not water!) for energy, they can drink 100+ liters in minutes, and they have double eyelashes and closing nostrils against sandstorms. One hump = dromedary, two humps = Bactrian.",
+"horse":"Horses were tamed about 5,500 years ago and changed travel, farming and history. They sleep standing up thanks to locking legs, see almost all the way around their body, and talk with their ears. A horse's age shows in its teeth - hence the saying, straight from the horse's mouth.",
+"lebanon":"Lebanon is a country on the eastern Mediterranean coast, with Beirut as its capital. Small but famous: cedar forests (the cedar is on the flag), 5,000-year-old cities like Byblos - one of the oldest continuously lived-in towns on Earth - delicious food like hummus, tabbouleh and manousheh, and mountains where you can ski and swim in the sea on the same day. Home of the Matix math club!",
+"beirut":"Beirut is the capital and biggest city of Lebanon, on the Mediterranean coast. It has been lived in for over 5,000 years and holds Roman ruins, museums, universities (some of the region's oldest) and a famous seaside promenade called the Corniche.",
+"france":"France is a country in Western Europe, capital Paris. It gave the world the metric system, the Statue of Liberty (a gift to the USA), the Tour de France, and famous food like croissants and baguettes. French is spoken by about 300 million people worldwide.",
+"paris":"Paris is the capital of France, nicknamed the City of Light. It is home to the Eiffel Tower, the Louvre (the world's most visited museum, where the Mona Lisa lives), Notre-Dame cathedral and the Seine river. The city is organized in 20 districts called arrondissements.",
+"eiffel tower":"The Eiffel Tower is a 330 m iron tower in Paris, built by Gustave Eiffel's company for the 1889 World's Fair. It was meant to be temporary - many Parisians hated it at first! It has 18,038 metal parts, 2.5 million rivets, and grows about 15 cm taller in summer as the iron expands.",
+"egypt":"Egypt is a country in northeast Africa, capital Cairo, home of one of the oldest civilizations. The ancient Egyptians built the pyramids, wrote in hieroglyphs, and depended on the Nile river - still the country's lifeline today. The Suez Canal links the Mediterranean and Red Seas.",
+"pyramids":"The pyramids of Giza in Egypt are 4,500-year-old royal tombs. The Great Pyramid was built from about 2.3 million stone blocks and was the tallest building on Earth for 3,800 years. Its base is level to within centimeters - ancient engineering that still amazes mathematicians.",
+"great wall of china":"The Great Wall of China is a chain of walls and towers built over 2,000 years to guard China's northern borders - all sections together stretch over 21,000 km. Despite the legend, you cannot really see it from space with the naked eye. Millions of workers built it, many from rice-flour mortar recipes!",
+"mount everest":"Mount Everest is Earth's highest mountain above sea level: 8,849 m, on the border of Nepal and China (Tibet). It grows about 4 mm taller each year as tectonic plates push. The air at the top holds only a third of the oxygen at sea level; Tenzing Norgay and Edmund Hillary first reached it in 1953.",
+"nile":"The Nile is traditionally called the longest river on Earth, about 6,650 km, flowing NORTH through 11 African countries to the Mediterranean. Ancient Egypt was called the gift of the Nile - its floods left rich soil for farming. (The Amazon carries far more water and rivals it in length.)",
+"amazon":"The Amazon is both the world's biggest rainforest and its mightiest river. The forest covers about 5.5 million square km across 9 South American countries and hosts 1 in 10 known species. The river pours more water into the sea than the next several biggest rivers combined - about 20% of all river water on Earth.",
+"sahara":"The Sahara is the largest hot desert on Earth - about 9.2 million square km across North Africa, nearly the size of the USA. Days can top 50 C while nights drop near freezing. It was green savanna with lakes just 6,000-10,000 years ago, and its dust fertilizes the Amazon across the ocean.",
+"pacific ocean":"The Pacific is the biggest and deepest ocean - almost half of Earth's ocean water, bigger than all land combined. Its deepest point, the Mariana Trench's Challenger Deep, plunges about 11 km - Everest would drown in it with 2 km to spare. Its name means peaceful, given by explorer Magellan.",
+"antarctica":"Antarctica is the frozen continent around the South Pole - the coldest, driest, windiest place on Earth (record: -89.2 C). Its ice sheet holds about 60% of Earth's fresh water. No country owns it; a treaty reserves it for science and peace. Penguins live there - polar bears do NOT (they are Arctic).",
+"equator":"The equator is the imaginary circle around Earth's middle, halfway between the poles, about 40,075 km long. Days and nights there are always about 12 hours each, and it passes through 13 countries including Ecuador - which is literally named after it.",
+"albert einstein":"Albert Einstein (1879-1955) was a German-born physicist, the most famous scientist of the 20th century. His theories of relativity showed that time and space can stretch and that E=mc2 - mass and energy are the same thing. He won the 1921 Nobel Prize (for the photoelectric effect, not relativity!) and his name now literally means genius.",
+"isaac newton":"Isaac Newton (1643-1727) was an English scientist who discovered the law of gravity, the three laws of motion, invented calculus (at the same time as Leibniz), and showed white light is a mix of colors. Legend says a falling apple sparked his gravity idea. His book Principia is one of the most important science books ever.",
+"pythagoras":"Pythagoras (about 570-495 BC) was a Greek mathematician famous for the theorem about right triangles: a2 + b2 = c2 - the squares of the two short sides add up to the square of the longest side. He led a secretive school that believed numbers explain the whole universe.",
+"archimedes":"Archimedes (about 287-212 BC) was a Greek genius of Syracuse. He found how buoyancy works in the bath and supposedly ran out shouting Eureka! (I found it!). He calculated pi amazingly well, explained levers - give me a place to stand and I will move the Earth - and built war machines to defend his city.",
+"al-khwarizmi":"Al-Khwarizmi (about 780-850) was a Persian mathematician in Baghdad's House of Wisdom. His book on al-jabr gave us the word ALGEBRA, and the word ALGORITHM comes from his name. He also helped spread the Hindu-Arabic numerals 0-9 that the whole world uses today.",
+"euclid":"Euclid (about 300 BC) was a Greek mathematician in Alexandria called the father of geometry. His book Elements built all of geometry from a handful of simple rules (axioms) with step-by-step proofs - it was used as THE math textbook for over 2,000 years.",
+"ada lovelace":"Ada Lovelace (1815-1852) was an English mathematician often called the first computer programmer. Writing about Charles Babbage's planned Analytical Engine, she published what is considered the first algorithm meant for a machine - and predicted computers could one day make music, a century before they existed.",
+"alan turing":"Alan Turing (1912-1954) was a British mathematician, the father of computer science. His Turing machine idea defined what computers can compute, his codebreaking at Bletchley Park cracked the Nazi Enigma cipher and helped shorten World War II, and his Turing Test still frames the question: can machines think?",
+"marie curie":"Marie Curie (1867-1934) was a Polish-French scientist who discovered the elements polonium and radium and coined the word radioactivity. She was the first woman to win a Nobel Prize, the first person to win TWO, and the only person to win in two different sciences (physics and chemistry).",
+"leonardo da vinci":"Leonardo da Vinci (1452-1519) was the ultimate Renaissance genius: painter of the Mona Lisa and The Last Supper, plus anatomist, engineer and inventor who sketched flying machines, tanks and robots centuries early. He wrote his 7,000+ notebook pages in mirror writing.",
+"nikola tesla":"Nikola Tesla (1856-1943) was a Serbian-American inventor whose alternating current (AC) system won the War of the Currents against Edison and now powers the world. He pioneered radio, remote control and wireless ideas, and dreamed of free energy for everyone. The Tesla car company is named in his honor.",
+"thomas edison":"Thomas Edison (1847-1931) was an American inventor with a record 1,093 patents: the practical light bulb, the phonograph (first recorded sound) and early movie cameras. He built the first industrial research lab and famously said genius is 1% inspiration, 99% perspiration.",
+"wright brothers":"Orville and Wilbur Wright were bicycle mechanics from Ohio who built and flew the first powered airplane on 17 December 1903 at Kitty Hawk. The first flight lasted 12 seconds and covered 37 meters - shorter than a jumbo jet's wingspan. Within 66 years, humans went from that to the Moon.",
+"neil armstrong":"Neil Armstrong (1930-2012) was the American astronaut who became the first human on the Moon on 20 July 1969 (Apollo 11), saying: one small step for man, one giant leap for mankind. He was a test pilot who once flew a rocket plane to the edge of space - and he kept his cool when the lunar lander had 30 seconds of fuel left.",
+"william shakespeare":"William Shakespeare (1564-1616) is the most famous writer in English: 39 plays (Romeo and Juliet, Hamlet, Macbeth) and 154 sonnets. He invented or popularized hundreds of words and phrases we still use - like break the ice and heart of gold.",
+"olympics":"The Olympic Games are the world's biggest sports event, held every 4 years (summer and winter alternate every 2). They began in ancient Olympia, Greece around 776 BC and were revived in 1896. The five rings stand for the inhabited continents united by sport.",
+"world cup":"The FIFA World Cup is the biggest football (soccer) tournament, held every 4 years since 1930. Brazil has won it a record 5 times. The final is watched by more than a billion people - the most watched sporting event on Earth.",
+"football":"Football (soccer) is the world's most popular sport, played by over 250 million people in 200+ countries. Two teams of 11 try to kick the ball into the other goal - no hands allowed except the goalkeeper. Legends include Pele, Maradona, Messi and Ronaldo. (American football is a different sport played with an oval ball.)",
+"basketball":"Basketball was invented in 1891 by PE teacher James Naismith, who nailed peach baskets to a gym balcony. Five players per team score by shooting through a hoop 3.05 m high: 2 points normally, 3 from long range, 1 for free throws. The NBA is the top league; legends include Michael Jordan, Kobe Bryant and LeBron James.",
+"money":"Money is anything a society agrees to trade with - it replaced awkward bartering. People have used shells, salt, giant stones and gold; paper money began in China. Today most money is just numbers in bank computers, and digital payments are replacing cash.",
+"time":"Time is what clocks measure - and one of physics' deepest mysteries. Einstein showed it is relative: it runs slightly slower when you move fast or sit deep in gravity (GPS satellites must correct for this!). Our units come from space: a day is one Earth spin, a year one orbit around the Sun.",
+"leap year":"A leap year adds February 29 because Earth's trip around the Sun takes about 365.25 days, not 365. Rule: divisible by 4 = leap year, EXCEPT century years must be divisible by 400 - so 2000 was a leap year but 1900 was not. Next ones: 2028, 2032.",
+"language":"A language is a system of sounds, words and grammar people use to share thoughts. The world has about 7,000 languages; the most spoken are English, Mandarin Chinese, Hindi, Spanish and Arabic. Babies can learn any language on Earth - their brains are built for it.",
+"arabic":"Arabic is a language spoken by over 400 million people across the Middle East and North Africa, written right-to-left in a flowing script. It gave the world words like algebra, algorithm, coffee and sugar - and the Arabic numerals 0-9 spread through Arab mathematicians to the whole planet.",
+"music":"Music is organized sound - melody, rhythm and harmony. It is a human universal: every culture makes it. Math hides inside: rhythms are fractions, and notes an octave apart double their vibration frequency. Learning an instrument measurably boosts memory and math skills.",
+"school":"School is where people learn together - reading, writing, math, science and how to think. The idea is ancient (Greek, Roman and Islamic scholars had academies), but free school for every child is barely 150 years old. Fun fact: the word school comes from a Greek word meaning free time!",
+"math":"Math (mathematics) is the science of numbers, shapes, patterns and logic - the language the universe seems to be written in. It powers physics, engineering, computers, games, music and money. Its branches include arithmetic, algebra, geometry, statistics and calculus. And the Matix club is living proof that math is power!",
+"friendship":"Friendship is a bond between people who trust, help and enjoy each other. Scientists find good friendships improve health, courage and even school results. The recipe is simple: be kind, listen, keep promises, share, and show up when it matters - like a good math club does."
+};
+try{for(var _mk in MXKB_PEDIA2){MXKB_PEDIA[_mk]=MXKB_PEDIA2[_mk];}}catch(e){}
+var MXKB_ALIAS={"soccer":"football","cocoa":"chocolate","potatoes":"potato","tomatoes":"tomato","bananas":"banana","apples":"apple","dogs":"dog","cats":"cat","lions":"lion","tigers":"tiger","elephants":"elephant","bees":"bee","ants":"ant","sharks":"shark","penguins":"penguin","owls":"owl","dolphins":"dolphin","horses":"horse","camels":"camel","pandas":"panda","kangaroos":"kangaroo","snakes":"snake","butterflies":"butterfly","octopuses":"octopus","whale":"blue whale","whales":"blue whale","dinosaurs":"dinosaur","volcanoes":"volcano","volcanos":"volcano","earthquakes":"earthquake","stars":"star","planets":"solar system","planet":"solar system","the sun":"sun","the moon":"moon","the internet":"internet","computers":"computer","robots":"robot","smartphones":"smartphone","phones":"smartphone","phone":"smartphone","iss":"international space station","space station":"international space station","einstein":"albert einstein","newton":"isaac newton","da vinci":"leonardo da vinci","tesla (person)":"nikola tesla","edison":"thomas edison","shakespeare":"william shakespeare","armstrong":"neil armstrong","curie":"marie curie","turing":"alan turing","khwarizmi":"al-khwarizmi","everest":"mount everest","great wall":"great wall of china","amazon river":"amazon","amazon rainforest":"amazon","rainforest":"amazon","nile river":"nile","the pacific":"pacific ocean","pacific":"pacific ocean","eiffel":"eiffel tower","pyramid":"pyramids","pyramids of giza":"pyramids","coding":"programming","code":"programming","ml":"machine learning","crypto":"bitcoin","cryptocurrency":"bitcoin","pokemons":"pokemon","pikachu":"pokemon","super mario":"mario","rockets":"rocket","satellites":"satellite","astronauts":"astronaut","black holes":"black hole","galaxies":"galaxy","milky way":"galaxy","comets":"comet","asteroids":"asteroid","cells":"cell","viruses":"virus","vaccines":"vaccine","muscles":"muscles","bones":"skeleton","bone":"skeleton","lungs":"lungs","clouds":"cloud","rainbows":"rainbow","tornadoes":"tornado","tornados":"tornado","hurricanes":"hurricane","tsunamis":"tsunami","global warming":"climate change","videogame":"video game","video games":"video game","videogames":"video game","games":"video game","the olympics":"olympics","olympic games":"olympics","fifa world cup":"world cup","chess game":"chess","draughts":"checkers"};
+
+/* =====================================================================
+   MATIX MEGA BRAIN - PART 4: the logic. Exact generators (roman, binary,
+   hex, elements, capitals, planets, months) + encyclopedia lookup +
+   /web search + /brain stats + Math Learn universal lessons.
+   ===================================================================== */
+var MXKB={el:{},elByName:{},elByNum:{},cap:{},us:{},months:{},acr:{}};
+try{
+  MXKB_EL.split(";").forEach(function(r){var p=r.split("|");MXKB.el[p[0].toLowerCase()]={sym:p[0],name:p[1],num:+p[2]};MXKB.elByName[p[1].toLowerCase()]={sym:p[0],name:p[1],num:+p[2]};MXKB.elByNum[p[2]]={sym:p[0],name:p[1],num:+p[2]};});
+  MXKB_CAP.split(";").forEach(function(r){var i=r.indexOf(":");MXKB.cap[r.slice(0,i)]=r.slice(i+1);});
+  MXKB_US.split(";").forEach(function(r){var i=r.indexOf(":");MXKB.us[r.slice(0,i)]=r.slice(i+1);});
+  MXKB_MONTHS.split(";").forEach(function(r){var i=r.indexOf(":");MXKB.months[r.slice(0,i)]=r.slice(i+1);});
+  MXKB_ACR.split(";").forEach(function(r){var i=r.indexOf(":");MXKB.acr[r.slice(0,i)]=r.slice(i+1);});
+}catch(e){}
+function mxkbEsc(x){return (typeof esc==="function")?esc(x):String(x==null?"":x);}
+function mxkbToRoman(n){
+  if(!(n>=1&&n<=3999))return null;
+  var V=[1000,900,500,400,100,90,50,40,10,9,5,4,1],S=["M","CM","D","CD","C","XC","L","XL","X","IX","V","IV","I"],o="";
+  for(var i=0;i<V.length;i++){while(n>=V[i]){o+=S[i];n-=V[i];}}
+  return o;
+}
+function mxkbFromRoman(s){
+  var M={I:1,V:5,X:10,L:50,C:100,D:500,M:1000},t=0,u=String(s||"").toUpperCase();
+  if(!/^[MDCLXVI]+$/.test(u))return null;
+  for(var i=0;i<u.length;i++){var v=M[u[i]],nx=M[u[i+1]]||0;t+=v<nx?-v:v;}
+  return (mxkbToRoman(t)===u)?t:null;
+}
+function mxkbCount(){
+  var pedia=0,acr=0,cap=0,us=0;
+  try{pedia=Object.keys(MXKB_PEDIA).length+Object.keys(MXKB_ALIAS).length;}catch(e){}
+  try{acr=Object.keys(MXKB.acr).length;cap=Object.keys(MXKB.cap).length;us=Object.keys(MXKB.us).length;}catch(e){}
+  return {roman:3999*2,binary:1024*2,hex:1024*2,elements:118*3,capitals:cap*2,states:us*2,planets:8*5,months:13,pedia:pedia,acr:acr,
+    total:3999*2+1024*2+1024*2+118*3+cap*2+us*2+8*5+13+pedia+acr};
+}
+function mxkbStats(){
+  var c=mxkbCount(),taught=0;try{taught=mxmemCount();}catch(e){}
+  return "\uD83E\uDDE0 <b>Matix AI brain report</b><br>"
+   +"Built-in exact answers I was taught by the club coders:<br>"
+   +"\u2022 Roman numerals 1-3999 (both directions): <b>"+c.roman.toLocaleString()+"</b><br>"
+   +"\u2022 Binary + hex conversions 0-1023: <b>"+(c.binary+c.hex).toLocaleString()+"</b><br>"
+   +"\u2022 Periodic table (118 elements, name/symbol/number): <b>"+c.elements+"</b><br>"
+   +"\u2022 World capitals: <b>"+c.capitals+"</b> \u00b7 US state capitals: <b>"+c.states+"</b><br>"
+   +"\u2022 Planets & months: <b>"+(c.planets+c.months)+"</b><br>"
+   +"\u2022 Club encyclopedia entries: <b>"+(c.pedia+c.acr)+"</b><br>"
+   +"= <b>"+c.total.toLocaleString()+" built-in answers</b> \u2014 plus every math question ever (infinite \uD83D\uDE0E), plus <b>"+taught+"</b> thing(s) the club taught me with /teach, plus the whole live web with /web.<br>"
+   +"<small>Try: capital of Japan \u00b7 47 in roman \u00b7 element 79 \u00b7 what is a potato \u00b7 how to play minecraft \u00b7 /web black holes</small>";
+}
+function mxkbSubject(qRaw){
+  var q=String(qRaw||"").toLowerCase().trim().replace(/[?!.]+$/,"").replace(/\s+/g," ");
+  var m=q.match(/^(?:what is|what's|whats|what are|who is|who's|whos|who was|who were|tell me about|explain|define|describe|what do you know about)\s+(.+)$/);
+  if(m)q=m[1];
+  m=q.match(/^how (?:do (?:i|you|we)|to|can (?:i|you|we))\s+(?:play\s+|use\s+|make\s+)?(.+)$/);
+  if(m)q=m[1];
+  m=q.match(/^(?:who|what) (?:made|created|invented|built|discovered|wrote|founded)\s+(.+)$/);
+  if(m)q=m[1];
+  q=q.replace(/^(a|an|the)\s+/,"").replace(/[?!.]+$/,"").trim();
+  return q;
+}
+function mxkbPedia(subject){
+  var s=String(subject||"").trim();
+  if(!s)return null;
+  if(MXKB_ALIAS[s])s=MXKB_ALIAS[s];
+  if(MXKB_PEDIA[s])return {title:s,text:MXKB_PEDIA[s]};
+  var s2=s.replace(/s$/,"");
+  if(MXKB_PEDIA[s2])return {title:s2,text:MXKB_PEDIA[s2]};
+  return null;
+}
+function mxkbCard(title,text,tag){
+  return "\uD83E\uDDE0 <b>"+mxkbEsc(title.charAt(0).toUpperCase()+title.slice(1))+"</b><br>"+mxkbEsc(text)
+   +"<br><small>"+(tag||"built-in club knowledge")+" \u00b7 want more? try <code>/web "+mxkbEsc(title)+"</code></small>";
+}
+function mxkbLookup(qRaw){
+  var q=String(qRaw||"").toLowerCase().trim().replace(/\s+/g," "),m;
+  if(!q)return null;
+  /* never steal math questions from the math engine */
+  if(/\d\s*[+\-*\/^=]|solve|simplif|% of|percent of|sqrt|\u221a|factorial|prime|gcd|lcm|mean of|median|average of|next in/.test(q))return null;
+  /* let the math lesson KB keep its topics */
+  try{if(typeof mxaiKBTopicFromText==="function"&&mxaiKBTopicFromText(q)&&!/capital|element|roman|binary|hex|planet|moon/.test(q))return null;}catch(e){}
+  /* capitals */
+  m=q.match(/(?:what is |what's |whats )?(?:the )?capital (?:city )?of (?:the )?(.+?)[?!.]*$/);
+  if(m){
+    var cn=m[1].replace(/^(the)\s+/,"").trim(),isState=/ state| usa| us$/.test(cn);
+    var cn2=cn.replace(/\s*(state|usa|us)$/,"").trim();
+    var country=MXKB.cap[cn2],state=MXKB.us[cn2];
+    if(country&&state&&!isState)return "\uD83C\uDF0D The capital of <b>"+mxkbEsc(cn2)+"</b> (the country) is <b>"+mxkbEsc(country)+"</b>.<br>\uD83C\uDDFA\uD83C\uDDF8 The US state of "+mxkbEsc(cn2)+" has the capital <b>"+mxkbEsc(state)+"</b>.";
+    if(isState&&state)return "\uD83C\uDDFA\uD83C\uDDF8 The capital of <b>"+mxkbEsc(cn2)+"</b> is <b>"+mxkbEsc(state)+"</b>.";
+    if(country)return "\uD83C\uDF0D The capital of <b>"+mxkbEsc(cn2)+"</b> is <b>"+mxkbEsc(country)+"</b>.";
+    if(state)return "\uD83C\uDDFA\uD83C\uDDF8 The capital of the US state <b>"+mxkbEsc(cn2)+"</b> is <b>"+mxkbEsc(state)+"</b>.";
+    return null;
+  }
+  /* roman numerals */
+  m=q.match(/(?:what is |convert |turn )?(\d{1,4})\s*(?:in|into|to|as)\s*roman/);
+  if(m){var rn=mxkbToRoman(+m[1]);if(rn)return "\uD83C\uDFDB <b>"+m[1]+" = "+rn+"</b> in Roman numerals.<br><small>M=1000, D=500, C=100, L=50, X=10, V=5, I=1 \u2014 a smaller letter before a bigger one subtracts.</small>";}
+  m=q.match(/(?:what is |convert |turn )?(?:the )?roman (?:numeral |number )?([mdclxvi]+)(?:\s*(?:in|into|to|as)\s*(?:a )?(?:normal|arabic|regular|decimal)?\s*(?:number|numbers)?)?$/);
+  if(m){var rv=mxkbFromRoman(m[1]);if(rv!=null)return "\uD83C\uDFDB <b>"+m[1].toUpperCase()+" = "+rv+"</b>.";}
+  m=q.match(/^([mdclxvi]{2,})\s*(?:in|into|to|as)\s*(?:a )?(?:normal|arabic|regular|decimal)?\s*(?:number|numbers)$/);
+  if(m){var rv2=mxkbFromRoman(m[1]);if(rv2!=null)return "\uD83C\uDFDB <b>"+m[1].toUpperCase()+" = "+rv2+"</b>.";}
+  /* binary / hex */
+  m=q.match(/(?:what is |convert |turn )?(\d+)\s*(?:in|into|to|as)\s*(binary|hex|hexadecimal)/);
+  if(m){var bn=+m[1];if(bn<=1e9)return "\uD83D\uDCBB <b>"+bn+" = "+(m[2]==="binary"?bn.toString(2):bn.toString(16).toUpperCase())+"</b> in "+(m[2]==="binary"?"binary":"hexadecimal")+".<br><small>"+(m[2]==="binary"?"Binary uses only 0 and 1 \u2014 each place doubles: 1, 2, 4, 8, 16\u2026":"Hex uses 0-9 then A-F (A=10 \u2026 F=15) \u2014 each place is worth 16\u00d7 more.")+"</small>";}
+  m=q.match(/(?:what is |convert )?binary\s+([01]{2,})\s*(?:in|into|to|as)?\s*(?:decimal|number|normal)?$/)||q.match(/^([01]{4,})\s*(?:in|into|to)\s*(?:decimal|number|normal)/);
+  if(m)return "\uD83D\uDCBB <b>binary "+m[1]+" = "+parseInt(m[1],2)+"</b> in decimal.";
+  m=q.match(/(?:what is |convert )?hex(?:adecimal)?\s+([0-9a-f]{1,8})\s*(?:in|into|to|as)?\s*(?:decimal|number|normal)?$/);
+  if(m)return "\uD83D\uDCBB <b>hex "+m[1].toUpperCase()+" = "+parseInt(m[1],16)+"</b> in decimal.";
+  /* periodic table */
+  m=q.match(/element (?:number |no\.? |#)?(\d{1,3})\b/);
+  if(m&&MXKB.elByNum[m[1]]){var E=MXKB.elByNum[m[1]];return "\u2697 Element #"+E.num+" is <b>"+E.name+" ("+E.sym+")</b>.";}
+  m=q.match(/(?:atomic number|symbol) (?:of |for )?([a-z ]+?)$/);
+  if(m){var en=MXKB.elByName[m[1].trim()];if(en)return "\u2697 <b>"+en.name+"</b> \u2014 symbol <b>"+en.sym+"</b>, atomic number <b>"+en.num+"</b>.";}
+  m=q.match(/^(?:what is |what's |whats )?(?:the )?element ([a-z]{1,2})$/);
+  if(m&&MXKB.el[m[1]]){var es=MXKB.el[m[1]];return "\u2697 <b>"+es.sym+"</b> is <b>"+es.name+"</b>, element #"+es.num+" of the periodic table.";}
+  /* planets */
+  m=q.match(/how many moons (?:does |do )?(?:the )?(mercury|venus|earth|mars|jupiter|saturn|uranus|neptune)/);
+  if(!m)m=q.match(/(mercury|venus|mars|jupiter|saturn|uranus|neptune)(?:'s)? moons/);
+  if(m){for(var i=0;i<MXKB_PLANETS.length;i++){if(MXKB_PLANETS[i][0].toLowerCase()===m[1])return "\uD83E\uDE90 <b>"+MXKB_PLANETS[i][0]+"</b> has <b>"+MXKB_PLANETS[i][3]+"</b>.";}}
+  m=q.match(/(?:what is |which is )?(?:the )?(\d)(?:st|nd|rd|th) planet/);
+  if(m&&MXKB_PLANETS[+m[1]-1]){var P=MXKB_PLANETS[+m[1]-1];return "\uD83E\uDE90 Planet #"+P[1]+" from the Sun is <b>"+P[0]+"</b> \u2014 a "+P[2]+" with "+P[3]+". Fun fact: "+P[4]+".";}
+  if(/biggest planet|largest planet/.test(q))return "\uD83E\uDE90 The biggest planet is <b>Jupiter</b> \u2014 more than 1,300 Earths could fit inside it.";
+  if(/smallest planet/.test(q))return "\uD83E\uDE90 The smallest planet is <b>Mercury</b> \u2014 also the closest to the Sun.";
+  if(/hottest planet/.test(q))return "\uD83E\uDE90 The hottest planet is <b>Venus</b> (about 465\u00b0C) \u2014 its thick atmosphere traps heat.";
+  if(/how many planets/.test(q))return "\uD83E\uDE90 Our solar system has <b>8 planets</b>: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune. (Pluto counts as a dwarf planet since 2006.)";
+  m=q.match(/^(?:what is |what's |whats |tell me about )?(?:the planet )?(mercury|venus|jupiter|saturn|uranus|neptune)$/);
+  if(m){for(var j=0;j<MXKB_PLANETS.length;j++){if(MXKB_PLANETS[j][0].toLowerCase()===m[1]){var Q=MXKB_PLANETS[j];return "\uD83E\uDE90 <b>"+Q[0]+"</b> is planet #"+Q[1]+" from the Sun \u2014 a "+Q[2]+" with "+Q[3]+". "+Q[4].charAt(0).toUpperCase()+Q[4].slice(1)+"."+(m[1]==="mercury"?" (Mercury is also a chemical element, Hg \u2014 the liquid metal in old thermometers.)":"");}}}
+  /* months */
+  m=q.match(/how many days (?:are there )?in (january|february|march|april|may|june|july|august|september|october|november|december)/);
+  if(m)return "\uD83D\uDCC5 <b>"+m[1].charAt(0).toUpperCase()+m[1].slice(1)+"</b> has <b>"+MXKB.months[m[1]]+"</b> days.";
+  if(/how many days in a year/.test(q))return "\uD83D\uDCC5 A year has <b>365 days</b> \u2014 366 in a leap year. (Earth actually takes about 365.25 days to orbit the Sun, which is why leap years exist.)";
+  /* acronyms + encyclopedia */
+  var subj=mxkbSubject(qRaw);
+  if(subj&&MXKB.acr[subj])return "\uD83D\uDD24 <b>"+subj.toUpperCase()+"</b>: "+mxkbEsc(MXKB.acr[subj]);
+  var pe=mxkbPedia(subj);
+  if(pe)return mxkbCard(pe.title,pe.text);
+  var enm=MXKB.elByName[subj];
+  if(enm)return "\u2697 <b>"+enm.name+"</b> is a chemical element \u2014 symbol <b>"+enm.sym+"</b>, atomic number <b>"+enm.num+"</b> on the periodic table.";
+  return null;
+}
+
+/* =====================================================================
+   MATIX AI & MATH LEARN UPGRADES:
+   - Special commands (/brain, /teach, /forget, /show mem, /mem) are OWNER-ONLY
+   - Auto-web search if answer is not in memory/KB/math (no /google needed)
+   - Math Learn 5-second minimum deep-thinking stage + rich synthesized lesson
+     (Step-by-step, Worked examples, Common mistakes, Words to memorize, Quiz)
+   - Quiz completion notification to owner (@ghadi) to award custom points
+   ===================================================================== */
+
+// Comprehensive Math Learn generator + AI logic upgrade
+// 1) Lesson richifier (step by step, worked examples, common mistakes, words to memorize/glossary, custom quiz)
+// 2) At least 5-second thinking stage in lxStart
+// 3) Quiz completion notification directly to owner (@ghadi) with custom action button to award points
+// 4) Special commands (/brain, /teach, /forget, /show mem, /mem) restricted to owner only (isOwner check)
+// 5) Remove /google and auto search web whenever not found in memory, KB, or math
+
+function mxBuildRichLesson(topic, webs, owners) {
+  var t = String(topic || "").trim();
+  var cap = t.charAt(0).toUpperCase() + t.slice(1);
+  var rawText = (webs || []).map(function(w){return (w && w.text) || "";}).join("\n\n");
+  var pe = (typeof mxkbPedia === "function") ? mxkbPedia(t.toLowerCase()) : null;
+  if (pe && pe.text) rawText = pe.text + "\n\n" + rawText;
+
+  // Split into clean sentences
+  var sentences = [];
+  rawText.replace(/\r/g, "").split(/\n+/).forEach(function(par) {
+    par.split(/(?<=[.!?])\s+/).forEach(function(s) {
+      s = s.trim().replace(/\s+/g, " ");
+      if (s.length > 20 && s.length < 240 && !/^==/.test(s)) {
+        sentences.push(s);
+      }
+    });
+  });
+
+  // Unique sentences
+  var uniq = [];
+  var seen = {};
+  sentences.forEach(function(s) {
+    var k = s.toLowerCase().slice(0, 40);
+    if (!seen[k]) { seen[k] = true; uniq.push(s); }
+  });
+
+  // Intro summary
+  var intro = (pe && pe.text) ? (pe.text.split(". ")[0] + ".") : (uniq[0] || (cap + " is a fascinating subject with clear core concepts."));
+
+  // 1) Step by Step (3 to 4 steps)
+  var steps = [];
+  if (uniq.length >= 3) {
+    steps.push({ title: "1. Core Concept", body: uniq[0] || ("Understanding " + cap + " starts with its primary idea.") });
+    steps.push({ title: "2. How it works & Details", body: (uniq[1] ? uniq[1] + " " : "") + (uniq[2] || "") });
+    if (uniq[3]) {
+      steps.push({ title: "3. Practical application", body: uniq[3] + (uniq[4] ? " " + uniq[4] : "") });
+    }
+  } else {
+    steps.push({ title: "1. Core Concept", body: "Every big idea starts with a small, clear definition." });
+    steps.push({ title: "2. Exploring deeper", body: "Take time to observe how " + cap + " connects with what you already know." });
+    steps.push({ title: "3. Putting it into practice", body: "Active practice and quizzes help lock this concept into your long-term memory." });
+  }
+
+  // 2) Worked examples
+  var examples = [];
+  if (uniq.length >= 6) {
+    examples.push({
+      problem: "Example 1: How do you identify the main feature of " + cap + "?",
+      solution: "Look at the fundamental definition: " + (uniq[0] || (cap + " is defined by its core structure."))
+    });
+    examples.push({
+      problem: "Example 2: How is " + cap + " applied in practice?",
+      solution: uniq[5] || ("Apply the rules step by step and verify your reasoning.")
+    });
+  } else {
+    examples.push({
+      problem: "Example 1: What is the most important rule about " + cap + "?",
+      solution: "Start from first principles, understand each part, and verify your results."
+    });
+  }
+
+  // 3) Common mistakes
+  var mistakes = [
+    "Rushing through the definitions without understanding the foundational terms.",
+    "Skipping the worked examples before trying the quiz.",
+    "Confusing " + cap + " with loosely related concepts without checking the facts."
+  ];
+
+  // 4) Words to memorize (Glossary)
+  var glossary = [];
+  // Extract key vocabulary from sentences
+  var words = rawText.replace(/[^a-zA-Z0-9\s-]/g, " ").split(/\s+/).filter(function(w){
+    return w.length > 5 && !/^(the|this|that|these|those|which|where|when|what|with|from|have|about|their|there|because)$/i.test(w);
+  });
+  var wFreq = {};
+  words.forEach(function(w){ var lw = w.toLowerCase(); wFreq[lw] = (wFreq[lw]||0) + 1; });
+  var topWords = Object.keys(wFreq).sort(function(a,b){ return wFreq[b] - wFreq[a]; }).slice(0, 6);
+
+  topWords.forEach(function(w) {
+    var defSen = "";
+    for (var i = 0; i < uniq.length; i++) {
+      if (new RegExp("\\b" + w + "\\b", "i").test(uniq[i])) {
+        defSen = uniq[i];
+        break;
+      }
+    }
+    glossary.push({
+      term: w.charAt(0).toUpperCase() + w.slice(1),
+      meaning: defSen ? ("Key context: " + defSen) : ("An essential term to memorize when studying " + cap + ".")
+    });
+  });
+
+  if (!glossary.length) {
+    glossary.push({ term: cap, meaning: "The central subject of this lesson." });
+    glossary.push({ term: "Concept", meaning: "An abstract idea or general notion." });
+    glossary.push({ term: "Application", meaning: "The action of putting something into operation." });
+  }
+
+  // 5) Quiz (Exercises)
+  var exercises = [];
+  // Fill in the blanks from sentences
+  uniq.slice(0, 4).forEach(function(sen) {
+    var sWords = sen.split(" ").filter(function(w){ return w.length > 5; });
+    if (sWords.length >= 1) {
+      var target = sWords[Math.floor(sWords.length / 2)].replace(/[^a-zA-Z0-9]/g, "");
+      if (target.length > 4) {
+        exercises.push({
+          type: "input",
+          q: "Fill in the blank: " + sen.replace(new RegExp("\\b" + target + "\\b", "i"), "_______"),
+          answer: target.toLowerCase(),
+          hint: "Think about the main terms in this lesson!",
+          explain: "The missing word is \"" + target + "\"."
+        });
+      }
+    }
+  });
+
+  // Multiple choice questions
+  if (topWords.length >= 3) {
+    exercises.push({
+      type: "mc",
+      q: "Which of the following is a primary keyword related to " + cap + "?",
+      choices: [
+        topWords[0].toUpperCase(),
+        "Random Unrelated Thing",
+        "Irrelevant Fact #99",
+        "None of the above"
+      ],
+      answer: "0",
+      hint: "Review the Words to Memorize section above!",
+      explain: topWords[0].toUpperCase() + " is a central keyword for " + cap + "."
+    });
+  }
+
+  // True / False
+  if (uniq[0]) {
+    exercises.push({
+      type: "mc",
+      q: "True or False: " + uniq[0],
+      choices: ["True", "False"],
+      answer: "0",
+      hint: "Check step 1 of your lesson!",
+      explain: "This statement is true according to verified lesson facts."
+    });
+  }
+
+  // Fallback warmups if needed to ensure at least 5 quiz items
+  var count = exercises.length;
+  while (exercises.length < 5) {
+    var a = 7 + exercises.length * 3, b = 4 + exercises.length * 2;
+    exercises.push({
+      type: "input",
+      q: "Brain Sharpener Quiz #" + (exercises.length + 1) + ": " + a + " + " + b + " = ?",
+      answer: String(a + b),
+      hint: "Add carefully!",
+      explain: a + " + " + b + " = " + (a + b) + "."
+    });
+  }
+
+  var emoji = "📘";
+  if (pe && pe.title) {
+    if (/minecraft|game|roblox|chess|fortnite/i.test(t)) emoji = "🎮";
+    else if (/potato|food|pizza|apple|banana/i.test(t)) emoji = "🥔";
+    else if (/planet|space|star|universe|black hole/i.test(t)) emoji = "🌌";
+    else if (/atom|dna|cell|science|element/i.test(t)) emoji = "🔬";
+    else emoji = "🧠";
+  }
+
+  return {
+    emoji: emoji,
+    title: cap,
+    topic: t,
+    intro: intro,
+    steps: steps,
+    examples: examples,
+    mistakes: mistakes,
+    glossary: glossary,
+    exercises: exercises
+  };
+}
+
+
+/* ---- OWNER ONLY SPECIAL COMMANDS GUARD ---- */
+function mxIsOwnerUser(){
+  try{
+    if(typeof isOwner==='function'&&isOwner())return true;
+    if(typeof ME==='string'&&ME.toLowerCase()==='ghadi')return true;
+  }catch(e){}
+  return false;
+}
+
+/* ---- OUTMOST ANSWER LAYER ---- */
+try{
+  var _mxkbPrev=mxaiAnswer;
+  mxaiAnswer=function(qRaw){
+    var q=String(qRaw||"").trim();
+    if(!q)return "Ask me anything!";
+
+    // Special owner-only commands
+    var isMemCmd = /^\/?(show|see|view)?\s*mem(ory)?\b/i.test(q) || /^what do you remember/i.test(q) || /^\/?(teach|forget)\b/i.test(q);
+    var isBrainCmd = /^\/brain\b/i.test(q);
+
+    if(isBrainCmd || isMemCmd){
+      if(!mxIsOwnerUser()){
+        return "🔒 <b>Owner-only command</b><br>Only @ghadi (the club owner) can view internal brain stats or teach new permanent memory. Ask Ghadi to teach me this!";
+      }
+      if(isBrainCmd) return mxkbStats();
+      try{var cmd=mxmemCommand(q);if(cmd)return cmd;}catch(e){}
+    }
+
+    // Check taught memory (accessible to all members to read)
+    try{
+      var hit=mxmemFind(q);
+      if(hit)return mxkbEsc(hit.a)+"<br><small>🧠 "+mxkbEsc(hit.by||"the club")+" taught me this</small>";
+    }catch(e){}
+
+    // Explicit /web search command
+    var w=q.match(/^\/web\s+(.+)$/i);
+    if(w){
+      var term=w[1].trim();
+      if(typeof navigator!=="undefined"&&!navigator.onLine)return "📡 You are offline right now — ask me anything from the built-in club knowledge!";
+      try{
+        var fb="🌐 The web did not answer in time — try asking in a different way!";
+        var kbFb=mxkbLookup(term);if(kbFb)fb=kbFb;
+        mx7Web(term,fb);
+        return {html:'<span class="mx7-pending">🌐 Searching the web for <b>'+mxkbEsc(term)+'</b>…</span>'};
+      }catch(e){}
+    }
+
+    // Built-in Knowledge Base lookup
+    try{
+      var kb=mxkbLookup(q);
+      if(kb)return kb;
+    }catch(e){}
+
+    // Try underlying Math/Conversation engine
+    var mathRes=null;
+    try{
+      mathRes=_mxkbPrev.apply(null,arguments);
+    }catch(e){mathRes=null;}
+
+    // If math engine returned a standard fallback or no match, automatically search the live web
+    var isFallback = !mathRes || (typeof mathRes==='string' && (mathRes.indexOf("math brain")>-1 || mathRes.indexOf("try:")>-1 || mathRes==="🧮" || mathRes.length<5));
+    if(isFallback && typeof navigator!=="undefined" && navigator.onLine){
+      var cleanTerm = q.replace(/^(what is|what are|who is|who was|tell me about|how to|define|explain)\s+/i,"").replace(/[?!.]+$/,"").trim();
+      if(cleanTerm.length >= 2){
+        try{
+          var fbMsg="🌐 Could not find information on <b>"+mxkbEsc(cleanTerm)+"</b> on the live web. Try asking @ghadi to /teach me!";
+          mx7Web(cleanTerm, fbMsg);
+          return {html:'<span class="mx7-pending">🌐 Searching the web for <b>'+mxkbEsc(cleanTerm)+'</b>…</span>'};
+        }catch(e){}
+      }
+    }
+
+    return mathRes || "🧠 I didn't catch that — try asking about math, science, geography, gaming, or anything on the web!";
+  };
+}catch(e){}
+
+/* ---- MATH LEARN: DEEP THINKING & SYNTHESIS ---- */
+try{
+  // 1) Full extract Wikipedia + Club knowledge synthesis
+  var _mxkbWiki=lxWiki;
+  lxWiki=function(host,topic){
+    var subj=mxkbSubject(topic),pe=mxkbPedia(subj);
+    if(host==="simple.wikipedia.org"&&pe){
+      return Promise.resolve({name:"Matix club encyclopedia",url:"",text:pe.text});
+    }
+    var t=String(topic||"").trim();
+    return fetch("https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&redirects=1&format=json&origin=*&titles="+encodeURIComponent(t))
+      .then(function(r){return r.json();})
+      .then(function(j){
+        var pgs=j&&j.query&&j.query.pages,txt="";
+        if(pgs){for(var k in pgs){if(pgs[k]&&pgs[k].extract){txt=pgs[k].extract;break;}}}
+        if(txt&&txt.length>300)return {name:"Wikipedia",url:"https://en.wikipedia.org/wiki/"+encodeURIComponent(t.replace(/\s+/g,"_")),text:String(txt).slice(0,12000)};
+        return _mxkbWiki(host,topic);
+      })["catch"](function(){return _mxkbWiki(host,topic);});
+  };
+
+  // 2) lxBuildLesson: Guarantee 5 seconds of thinking & rich structure
+  var _origBuildLesson = lxBuildLesson;
+  lxBuildLesson=function(topic,onStage){
+    var startTime = Date.now();
+    function stage(i){try{onStage&&onStage(i);}catch(e){}}
+    stage(1);
+    var ownerP = lxOwnerLessons(topic);
+    stage(2);
+    var webP = Promise.all([
+      lxWiki('simple.wikipedia.org', topic)["catch"](function(){return null;}),
+      lxWiki('en.wikipedia.org', topic)["catch"](function(){return null;})
+    ]);
+
+    return Promise.all([ownerP, webP]).then(function(res){
+      var owners = res[0]||[], webs = (res[1]||[]).filter(Boolean);
+      stage(3);
+
+      var kb = lxKBFind(topic);
+      var richLesson = mxBuildRichLesson(topic, webs, owners);
+
+      if(kb){
+        var kbLesson = JSON.parse(JSON.stringify(kb));
+        delete kbLesson.gen;
+        if(LX_GEN && LX_GEN[kb.gen]) kbLesson.exercises = LX_GEN[kb.gen]();
+        // Enrich KB lesson with common mistakes & glossary if missing
+        if(!kbLesson.mistakes||!kbLesson.mistakes.length) kbLesson.mistakes = richLesson.mistakes;
+        if(!kbLesson.glossary||!kbLesson.glossary.length) kbLesson.glossary = richLesson.glossary;
+        richLesson = kbLesson;
+      }
+
+      stage(4);
+
+      // Ensure at least 5000ms (5 seconds) thinking time
+      var elapsed = Date.now() - startTime;
+      var remaining = Math.max(0, 5200 - elapsed);
+
+      return new Promise(function(resolve){
+        setTimeout(function(){
+          resolve({lesson: richLesson, cache: 'fresh'});
+        }, remaining);
+      });
+    });
+  };
+
+  // 3) Hook Quiz Completion to Notify Owner (@ghadi)
+  var _origRenderScore = lxRenderScore;
+  lxRenderScore=function(c){
+    _origRenderScore(c);
+    try{
+      var L=LX.lesson, exs=L.exercises||[], pct=exs.length?Math.round(100*LXP.score/exs.length):0;
+      var learner = (typeof ME==='string'&&ME)?ME:'guest';
+      var topicName = (L.title||L.topic||'General Lesson');
+
+      // Send Firebase notification to owner @ghadi
+      if(typeof fbPost==='function'){
+        var notifData = {
+          type: 'quiz_result',
+          user: learner,
+          targetUser: learner,
+          topic: topicName,
+          score: pct + '% (' + LXP.score + '/' + exs.length + ')',
+          title: '🎯 ' + learner + ' completed quiz: ' + topicName,
+          body: '@' + learner + ' scored ' + pct + '% (' + LXP.score + '/' + exs.length + ' correct) on the "' + topicName + '" quiz. Click below to award points!',
+          at: Date.now()
+        };
+        fbPost('/notifications/ghadi', notifData);
+      }
+    }catch(err){}
   };
 }catch(e){}
 
