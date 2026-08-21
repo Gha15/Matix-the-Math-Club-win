@@ -9594,7 +9594,7 @@ function renderAI(c){
   function paintAll(){
     scroll.innerHTML='';
     if(!MXAI_LOG.length){
-      MXAI_LOG.push({who:'ai',html:'\uD83D\uDC4B '+esc(tr('Hey! I\u2019m the Matix AI — a math brain the club built itself. Ask me to solve, calculate, or explain anything. Try a chip below!'))});
+      MXAI_LOG.push({who:'ai',html:'\uD83D\uDC4B '+esc(tr('Hey! I\u2019m the Matix AI — a math brain the club built itself, right inside this app. Solve, calculate, explain — and teach me: /teach question = answer, then /show mem to see everything the club taught me!'))});
       mxaiSave();
     }
     MXAI_LOG.forEach(function(m){bubble(m.who,m.html);});
@@ -10024,7 +10024,7 @@ var MXAI_FACTS=[
  'A \u201cgoogol\u201d is 10\u00b9\u2070\u2070 \u2014 more than the atoms in the observable universe.',
  'The equals sign = was invented in 1557 because a mathematician was tired of writing \u201cis equal to\u201d.'
 ];
-MXAI_CHIPS=['solve 2x + 5 = 13','\u221a144','convert 5 km to miles','area of circle radius 5','next in 2, 4, 8, 16','roll a dice','translate hello to arabic'];
+MXAI_CHIPS=['/teach what is our motto = math is power','/show mem','solve 2x + 5 = 13','\u221a144','area of circle radius 5','next in 2, 4, 8, 16','roll a dice'];
 
 var MXCONV={km:['len',1000],kilometer:['len',1000],kilometre:['len',1000],mile:['len',1609.344],mi:['len',1609.344],m:['len',1],meter:['len',1],metre:['len',1],ft:['len',0.3048],foot:['len',0.3048],feet:['len',0.3048],cm:['len',0.01],mm:['len',0.001],inch:['len',0.0254],inche:['len',0.0254],'in':['len',0.0254],kg:['mass',1000],kilogram:['mass',1000],lb:['mass',453.592],pound:['mass',453.592],g:['mass',1],gram:['mass',1],oz:['mass',28.3495],ounce:['mass',28.3495],l:['vol',1],liter:['vol',1],litre:['vol',1],gallon:['vol',3.78541],gal:['vol',3.78541],ml:['vol',0.001],hour:['time',3600],hr:['time',3600],minute:['time',60],min:['time',60],second:['time',1],sec:['time',1],day:['time',86400],week:['time',604800]};
 function mx4Unit(u){u=String(u||'').toLowerCase();if(MXCONV[u])return u;if(u.slice(-1)==='s'&&MXCONV[u.slice(0,-1)])return u.slice(0,-1);if(u==='feet')return 'foot';return null;}
@@ -10828,6 +10828,151 @@ setInterval(function(){
     hero.appendChild(b);
   }catch(e){}
 },500);
+
+/* =====================================================================
+   CLUB BRAIN MEMORY  (100% inside this file - no server, no API key)
+   The AI learns from the club and every member's app shares the memory.
+     /teach question = answer     teach the AI an answer
+     /teach some fact             remember a fact
+     /show mem                    dump everything it knows
+     /forget <thing>  |  /forget all
+   ===================================================================== */
+var MXMEM = {taught:{}, facts:[]};
+var MXMEM_PATH = '/ai_memory';
+function mxmemLoad(){
+  try{
+    var raw = (typeof lsGet==='function') ? lsGet('mx_ai_mem') : localStorage.getItem('mx_ai_mem');
+    if(raw){var o=JSON.parse(raw)||{};MXMEM.taught=o.taught||{};MXMEM.facts=o.facts||[];}
+  }catch(e){MXMEM={taught:{},facts:[]};}
+}
+function mxmemSave(){
+  try{
+    var j=JSON.stringify(MXMEM);
+    if(typeof lsSet==='function')lsSet('mx_ai_mem',j); else localStorage.setItem('mx_ai_mem',j);
+  }catch(e){}
+}
+function mxmemPush(){
+  mxmemSave();
+  try{if(typeof fbPut==='function')fbPut(MXMEM_PATH,MXMEM);}catch(e){}
+}
+function mxmemSync(){
+  try{
+    if(typeof fbGet!=='function')return;
+    fbGet(MXMEM_PATH).then(function(o){
+      if(!o||typeof o!=='object')return;
+      var t=o.taught||{},f=o.facts||[],changed=false;
+      Object.keys(t).forEach(function(k){if(!MXMEM.taught[k]){MXMEM.taught[k]=t[k];changed=true;}});
+      (f.length?f:[]).forEach(function(x){if(MXMEM.facts.indexOf(x)<0){MXMEM.facts.push(x);changed=true;}});
+      if(changed)mxmemSave();
+    })['catch'](function(){});
+  }catch(e){}
+}
+mxmemLoad();
+try{setTimeout(mxmemSync,1500);setInterval(mxmemSync,60000);}catch(e){}
+function mxmemEsc(x){return (typeof esc==='function')?esc(x):String(x==null?'':x);}
+function mxmemKey(x){return String(x||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+function mxmemWho(){return (typeof ME==='string'&&ME)?ME:'someone';}
+function mxmemCount(){return Object.keys(MXMEM.taught).length+MXMEM.facts.length;}
+function mxmemFind(q){
+  var k=mxmemKey(q);
+  if(!k)return null;
+  if(MXMEM.taught[k])return MXMEM.taught[k];
+  var qs=k.split(' ').filter(function(w){return w.length>2;});
+  if(!qs.length)return null;
+  var best=null,bestScore=0;
+  Object.keys(MXMEM.taught).forEach(function(key){
+    var ks=key.split(' ').filter(function(w){return w.length>2;});
+    if(!ks.length)return;
+    var hit=0;
+    qs.forEach(function(w){if(ks.indexOf(w)>-1)hit++;});
+    var score=hit/Math.max(qs.length,ks.length);
+    if(score>bestScore){bestScore=score;best=MXMEM.taught[key];}
+  });
+  return bestScore>=0.6?best:null;
+}
+function mxmemShow(){
+  var tk=Object.keys(MXMEM.taught);
+  if(!tk.length&&!MXMEM.facts.length){
+    return '\uD83E\uDDE0 <b>My memory is empty.</b><br>Teach me first:<br>\u2022 <code>/teach what is our motto = math is power</code><br>\u2022 <code>/teach Friday is pizza day</code>';
+  }
+  var h='\uD83E\uDDE0 <b>Everything the club taught me ('+mxmemCount()+')</b>';
+  if(tk.length){
+    h+='<br><br><b>Answers I learned</b>';
+    tk.slice(0,40).forEach(function(k){
+      var v=MXMEM.taught[k]||{};
+      h+='<br>\u2022 <b>'+mxmemEsc(v.q||k)+'</b> \u2192 '+mxmemEsc(v.a||'')+' <small>('+mxmemEsc(v.by||'club')+')</small>';
+    });
+  }
+  if(MXMEM.facts.length){
+    h+='<br><br><b>Facts I remember</b>';
+    MXMEM.facts.slice(-40).forEach(function(f){h+='<br>\u2022 '+mxmemEsc(f);});
+  }
+  h+='<br><br><small>Remove one with <code>/forget &lt;thing&gt;</code>, wipe all with <code>/forget all</code>.</small>';
+  return h;
+}
+function mxmemCommand(qRaw){
+  var raw=String(qRaw||'').trim(), low=raw.toLowerCase(), m;
+  if(/^\/?(show|see|view)\s*mem(ory)?\b/.test(low)||/^\/mem\b/.test(low)||/^what do you remember/.test(low)){
+    return mxmemShow();
+  }
+  if(/^\/?(help|commands?)$/.test(low)){
+    return '\uD83E\uDDE0 <b>Brain commands</b><br>\u2022 <code>/teach question = answer</code><br>\u2022 <code>/teach Friday is pizza day</code><br>\u2022 <code>/show mem</code><br>\u2022 <code>/forget &lt;thing&gt;</code> \u00b7 <code>/forget all</code><br><small>Whatever you teach me is shared with every club member\u2019s app.</small>';
+  }
+  m=raw.match(/^\/?forget\s+([\s\S]+)$/i);
+  if(m){
+    var what=m[1].trim();
+    if(/^(all|everything)$/i.test(what)){
+      MXMEM={taught:{},facts:[]};mxmemPush();
+      return '\uD83E\uDDF9 Memory wiped \u2014 I forgot everything the club taught me. Fresh brain \u2728';
+    }
+    var k=mxmemKey(what), gone=false;
+    if(MXMEM.taught[k]){delete MXMEM.taught[k];gone=true;}
+    var before=MXMEM.facts.length;
+    MXMEM.facts=MXMEM.facts.filter(function(x){return mxmemKey(x).indexOf(k)<0;});
+    if(MXMEM.facts.length!==before)gone=true;
+    if(gone){mxmemPush();return '\uD83E\uDDF9 Forgot <b>'+mxmemEsc(what)+'</b>. I still remember '+mxmemCount()+' thing(s).';}
+    return 'That is not in my memory. Try <code>/show mem</code> to see what I know.';
+  }
+  m=raw.match(/^\/teach\b[:\s]*([\s\S]*)$/i);
+  if(!m)m=raw.match(/^teach\s*:\s*([\s\S]+)$/i);
+  if(m){
+    var body=String(m[1]||'').trim();
+    if(!body)return 'Teach me like this: <code>/teach what is our motto = math is power</code>';
+    var parts=body.split('=');
+    if(parts.length>=2&&parts[0].trim()&&parts.slice(1).join('=').trim()){
+      var qq=parts[0].trim().replace(/^me\s+/i,''), aa=parts.slice(1).join('=').trim();
+      MXMEM.taught[mxmemKey(qq)]={q:qq.slice(0,160),a:aa.slice(0,600),by:mxmemWho(),at:Date.now()};
+      mxmemPush();
+      return '\u2705 Learned it! When anyone in the club asks <b>'+mxmemEsc(qq)+'</b> I will answer:<br>\u201c'+mxmemEsc(aa)+'\u201d<br><small>Taught by '+mxmemEsc(mxmemWho())+' \u00b7 '+mxmemCount()+' thing(s) in memory \u00b7 <code>/show mem</code></small>';
+    }
+    if(/^me\s+/i.test(body))return null; /* "/teach me fractions" = lesson request */
+    var fact=body.replace(/^that\s+/i,'').slice(0,300);
+    if(MXMEM.facts.indexOf(fact)<0)MXMEM.facts.push(fact);
+    if(MXMEM.facts.length>200)MXMEM.facts=MXMEM.facts.slice(-200);
+    mxmemPush();
+    return '\uD83D\uDCDD Got it \u2014 I will remember: <b>'+mxmemEsc(fact)+'</b><br><small>Saved for the whole club \u00b7 '+mxmemCount()+' thing(s) \u00b7 <code>/show mem</code></small>';
+  }
+  m=raw.match(/^(?:remember)\s+(?:that\s+)?([\s\S]+)$/i);
+  if(m){
+    var fx=m[1].trim().slice(0,300);
+    if(MXMEM.facts.indexOf(fx)<0)MXMEM.facts.push(fx);
+    mxmemPush();
+    return '\uD83D\uDCDD Remembered: <b>'+mxmemEsc(fx)+'</b><br><small>Every club member\u2019s AI knows it now \u00b7 <code>/show mem</code></small>';
+  }
+  return null;
+}
+/* final override: commands + taught answers win over everything else */
+try{
+  var _mxmemPrev = mxaiAnswer;
+  mxaiAnswer = function(qRaw){
+    try{var c=mxmemCommand(qRaw);if(c)return c;}catch(e){}
+    try{
+      var hit=mxmemFind(qRaw);
+      if(hit)return mxmemEsc(hit.a)+'<br><small>\uD83E\uDDE0 '+mxmemEsc(hit.by||'the club')+' taught me this \u00b7 <code>/show mem</code></small>';
+    }catch(e){}
+    return _mxmemPrev.apply(null,arguments);
+  };
+}catch(e){}
 
 </script>
 </body>
