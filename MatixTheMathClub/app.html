@@ -12022,6 +12022,229 @@ try{
 
 }catch(e){}
 
+
+/* ================= WEB SEARCH v2: many sources, ONE clean message ================= */
+var MXW_GAMES={'minecraft':'minecraft','fortnite':'fortnite','roblox':'roblox','terraria':'terraria','among us':'among-us','valorant':'valorant','clash royale':'clashroyale','clash of clans':'clashofclans','brawl stars':'brawlstars','geometry dash':'geometry-dash','genshin':'genshin-impact','stardew':'stardewvalley','subnautica':'subnautica','apex legends':'apexlegends','call of duty':'callofduty','gta':'gta','grand theft auto':'gta','zelda':'zelda','mario':'mario','pokemon':'pokemon','fnaf':'freddy-fazbears-pizza','five nights':'freddy-fazbears-pizza','sonic':'sonic','kirby':'kirby','undertale':'undertale','rocket league':'rocketleague','fall guys':'fallguys','plants vs zombies':'plantsvszombies','angry birds':'angrybirds','hollow knight':'hollowknight'};
+var mxwGame=function(q){var n=String(q||'').toLowerCase(),k=null;Object.keys(MXW_GAMES).forEach(function(g){if(!k&&n.indexOf(g)>-1)k=g;});return k?{game:k,host:MXW_GAMES[k]+'.fandom.com'}:null;};
+var MXW_FILLER=/^\s*(best|top|greatest|coolest|ultimate|good|nice|fastest|easiest|easy|perfect|amazing|awesome|new|newest|latest|most|really|very|super)\b/i;
+var mxwClean=function(q){
+  var t=String(q||'').trim();
+  t=t.replace(/^\/?(google|search|web|lookup|look\s*up|find|browse|internet)\b/i,'');
+  t=t.replace(/^\s*(what\s+is|what\s+are|what's|whats|who\s+is|who\s+was|tell\s+me\s+about|explain|define|describe|how\s+do\s+i|how\s+do\s+you|how\s+to|how\s+can\s+i)\b/i,'');
+  var prev=null;
+  while(prev!==t){prev=t;t=t.replace(MXW_FILLER,'');t=t.replace(/^\s*(the|a|an|for|about|on|me|please|pls|stuff|things?|info|information)\b/i,'');}
+  t=t.replace(/\b(easily|quickly|fast|for beginners|step by step|please|pls)\b/gi,' ');
+  return t.replace(/[?!.]+$/,'').replace(/\s+/g,' ').trim();
+};
+var mxwJson=function(url,ms){
+  return new Promise(function(res,rej){
+    var done=false;
+    var t=setTimeout(function(){if(!done){done=true;rej(new Error('timeout'));}},ms||7000);
+    try{
+      fetch(url).then(function(r){return r.json();}).then(function(j){if(!done){done=true;clearTimeout(t);res(j);}})['catch'](function(e){if(!done){done=true;clearTimeout(t);rej(e);}});
+    }catch(e){if(!done){done=true;clearTimeout(t);rej(e);}}
+  });
+};
+var mxwOk=function(r){return r&&r.text&&String(r.text).replace(/\s+/g,' ').trim().length>60?r:null;};
+/* wikipedia-style: exact title lookup then summary */
+var mxwWiki=function(host,term){
+  var nice=(host.indexOf('simple')===0)?'Simple Wikipedia':'Wikipedia';
+  return mxwJson('https://'+host+'/w/api.php?action=opensearch&format=json&limit=1&namespace=0&origin=*&search='+encodeURIComponent(term),6500)
+    .then(function(a){
+      var title=(a&&a[1]&&a[1][0])?a[1][0]:null;
+      if(!title)return null;
+      return mxwJson('https://'+host+'/api/rest_v1/page/summary/'+encodeURIComponent(String(title).replace(/ /g,'_')),6500)
+        .then(function(s){
+          if(!s||!s.extract)return null;
+          return mxwOk({title:s.title||title,text:s.extract,src:nice,url:(s.content_urls&&s.content_urls.desktop&&s.content_urls.desktop.page)||('https://'+host)});
+        })['catch'](function(){return null;});
+    })['catch'](function(){return null;});
+};
+/* full text search on any mediawiki site (works when the title is not exact) */
+var mxwMwSearch=function(host,term,nice){
+  return mxwJson('https://'+host+'/w/api.php?action=query&list=search&srlimit=1&format=json&origin=*&srsearch='+encodeURIComponent(term),7000)
+    .then(function(j){
+      var hit=j&&j.query&&j.query.search&&j.query.search[0];
+      if(!hit||!hit.title)return null;
+      return mxwJson('https://'+host+'/w/api.php?action=query&prop=extracts&explaintext=1&redirects=1&exintro=1&format=json&origin=*&titles='+encodeURIComponent(hit.title),7000)
+        .then(function(k){
+          var pg=k&&k.query&&k.query.pages,txt=null,ttl=hit.title;
+          if(pg)Object.keys(pg).forEach(function(id){if(!txt&&pg[id]&&pg[id].extract){txt=pg[id].extract;ttl=pg[id].title||ttl;}});
+          if(!txt)return null;
+          return mxwOk({title:ttl,text:txt,src:nice||'Wikipedia',url:'https://'+host+'/wiki/'+encodeURIComponent(String(ttl).replace(/ /g,'_'))});
+        })['catch'](function(){return null;});
+    })['catch'](function(){return null;});
+};
+/* game wikis - this is where minecraft/fortnite answers actually live */
+var mxwFandom=function(term){
+  var g=mxwGame(term);
+  if(!g)return Promise.resolve(null);
+  var host=g.host,nice=g.game.charAt(0).toUpperCase()+g.game.slice(1)+' Wiki';
+  var q=String(term||'').replace(new RegExp(g.game,'ig'),' ').replace(/\s+/g,' ').trim()||g.game;
+  return mxwJson('https://'+host+'/api.php?action=query&list=search&srlimit=1&format=json&origin=*&srsearch='+encodeURIComponent(q),7000)
+    .then(function(j){
+      var hit=j&&j.query&&j.query.search&&j.query.search[0];
+      if(!hit||!hit.title)return null;
+      return mxwJson('https://'+host+'/api.php?action=query&prop=extracts&explaintext=1&redirects=1&format=json&origin=*&titles='+encodeURIComponent(hit.title),7000)
+        .then(function(k){
+          var pg=k&&k.query&&k.query.pages,txt=null,ttl=hit.title;
+          if(pg)Object.keys(pg).forEach(function(id){if(!txt&&pg[id]&&pg[id].extract){txt=pg[id].extract;ttl=pg[id].title||ttl;}});
+          if(!txt)return null;
+          return mxwOk({title:ttl,text:String(txt).split(/\n\s*\n/).slice(0,3).join(' '),src:nice,url:'https://'+host+'/wiki/'+encodeURIComponent(String(ttl).replace(/ /g,'_'))});
+        })['catch'](function(){return null;});
+    })['catch'](function(){return null;});
+};
+/* duckduckgo instant answers - good for "best x", brands, people, random stuff */
+var mxwDdg=function(term){
+  return mxwJson('https://api.duckduckgo.com/?format=json&no_html=1&skip_disambig=1&t=matix&q='+encodeURIComponent(term),7000)
+    .then(function(j){
+      if(!j)return null;
+      var txt=j.AbstractText||j.Answer||'';
+      if((!txt||String(txt).length<60)&&j.RelatedTopics&&j.RelatedTopics.length){
+        var parts=[];
+        j.RelatedTopics.slice(0,4).forEach(function(rt){if(rt&&rt.Text)parts.push(rt.Text);});
+        if(parts.length)txt=parts.join(' ');
+      }
+      if(!txt)return null;
+      return mxwOk({title:j.Heading||term,text:String(txt),src:j.AbstractSource||'DuckDuckGo',url:j.AbstractURL||''});
+    })['catch'](function(){return null;});
+};
+var mxwWiktionary=function(term){
+  var w=String(term||'').trim();
+  if(!w||w.split(' ').length>2)return Promise.resolve(null);
+  return mxwMwSearch('en.wiktionary.org',w,'Wiktionary');
+};
+/* try every source in order until one really answers */
+var mxwChain=function(term){
+  var t=String(term||'').trim(),c=mxwClean(t),tries=[];
+  if(mxwGame(t))tries.push(function(){return mxwFandom(t);});
+  tries.push(function(){return mxwWiki('en.wikipedia.org',t);});
+  tries.push(function(){return mxwWiki('simple.wikipedia.org',t);});
+  tries.push(function(){return mxwMwSearch('en.wikipedia.org',t,'Wikipedia');});
+  if(c&&c!==t){
+    tries.push(function(){return mxwWiki('en.wikipedia.org',c);});
+    tries.push(function(){return mxwMwSearch('en.wikipedia.org',c,'Wikipedia');});
+  }
+  tries.push(function(){return mxwDdg(t);});
+  if(c&&c!==t)tries.push(function(){return mxwDdg(c);});
+  tries.push(function(){return mxwWiktionary(c||t);});
+  var i=0;
+  var next=function(){
+    if(i>=tries.length)return Promise.resolve(null);
+    var f=tries[i++],p=null;
+    try{p=f();}catch(e){p=null;}
+    if(!p||typeof p.then!=='function')return next();
+    return p.then(function(r){return r?r:next();})['catch'](function(){return next();});
+  };
+  return next();
+};
+var mxwIsErrText=function(h){return /did not answer|could not find|Try fewer words|looked online/i.test(String(h||''));};
+var mxwSay=function(r,term){
+  var body=String(r.text||'').replace(/\s+/g,' ').trim();
+  if(body.length>700)body=body.slice(0,700).replace(/\s+\S*$/,'')+'\u2026';
+  var link=r.url?' \u00b7 <a href="'+r.url+'" target="_blank" rel="noopener">open</a>':'';
+  return '\uD83C\uDF10 <b>'+mxkbEsc(r.title||term)+'</b><br>'+mxkbEsc(body)+'<br><small>live from '+mxkbEsc(r.src||'the web')+link+'</small>';
+};
+var mxwNoAnswer=function(term){
+  var t=String(term||'').trim(),c=mxwClean(t)||t;
+  var tip=(c&&c!==t)?(' Try <b>'+mxkbEsc(c)+'</b>.'):'';
+  var own=false;try{own=mxIsOwnerUser();}catch(e){}
+  var teach=own?(' Or teach me: <code>/teach '+mxkbEsc(t)+' = your answer</code>.'):' Or ask Ghadi to teach me this!';
+  return '\uD83C\uDF10 I searched Wikipedia, the game wikis and DuckDuckGo, but nothing had a clear answer for <b>'+mxkbEsc(t)+'</b>.'+tip+teach;
+};
+/* ONE message only - the old code glued two error sentences together */
+mx7Web=function(term,fallbackHtml){
+  var done=false;
+  var fin=function(h){if(done)return;done=true;try{mx7Patch(h);}catch(e){}setTimeout(function(){try{mx7Patch(h);}catch(e){}},1800);};
+  var giveUp=function(){fin((fallbackHtml&&!mxwIsErrText(fallbackHtml))?fallbackHtml:mxwNoAnswer(term));};
+  setTimeout(function(){giveUp();},16000);
+  try{
+    mxwChain(term).then(function(r){if(r&&r.text)fin(mxwSay(r,term));else giveUp();})['catch'](function(){giveUp();});
+  }catch(e){giveUp();}
+};
+mxWebSearch=function(term,extraFallback){
+  var t=mxSearchTerm(term)||String(term||'').trim();
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){
+    var off=null;try{off=mxkbLookup(t);}catch(e){}
+    return off||('\uD83D\uDCE1 You are offline \u2014 but I still know 13,000+ things by heart. Ask me anything, like <b>what is a potato</b> or <b>capital of Japan</b>.');
+  }
+  try{
+    var fb=(extraFallback&&!mxwIsErrText(extraFallback))?extraFallback:null;
+    if(!fb){try{fb=mxkbLookup(t);}catch(e){}}
+    mx7Web(t,fb);
+    return {html:'<span class="mx7-pending">\uD83C\uDF10 Searching the web for <b>'+mxkbEsc(t)+'</b>\u2026</span>'};
+  }catch(e){}
+  return null;
+};
+
+/* ============ LEARN FIX: teach the REAL topic, never "wait X is math?!" ============ */
+/* the old override turned ANY topic into a math lesson because mx4Mathify
+   matches by substring: "how to beat minecraft easily" contains "minecraft",
+   so lxKBFind returned the area lesson with a step called
+   "Wait... minecraft is math?!". Now: real math topics use the math KB,
+   everything else returns null so lxBuildLesson researches the actual topic. */
+var mxlKB=function(topic){
+  var t=String(topic||'');
+  var direct=null;
+  try{if(typeof _mx4KB==='function')direct=_mx4KB(t);}catch(e){direct=null;}
+  return direct||null;
+};
+lxKBFind=mxlKB;
+/* a saved lesson from the buggy days must not be served from the cache */
+var mxlJunkLesson=function(L){
+  if(!L)return false;
+  var s='';
+  try{s=JSON.stringify(L);}catch(e){return false;}
+  return /is math\?!|Anything can be math|The Math of |is secretly|You just did multiplication and exponents without noticing/i.test(s);
+};
+/* research fallback for Learn: if wikipedia has no page, use the game wikis
+   and DuckDuckGo (same chain the chat AI uses) so game/how-to topics work */
+var _mxlWiki=lxWiki;
+lxWiki=function(host,topic){
+  var p;
+  try{p=_mxlWiki(host,topic);}catch(e){p=Promise.reject(e);}
+  return p['catch'](function(err){
+    if(String(host||'').indexOf('en.')!==0)throw err;
+    if(typeof mxwChain!=='function')throw err;
+    return mxwChain(topic).then(function(r){
+      if(!r||!r.text)throw err;
+      return {name:r.src||'the web',url:r.url||'',text:r.text};
+    });
+  });
+};
+var _mxlStart=lxStart;
+lxStart=function(c,topic,refresh){
+  var t=String(topic||'').trim();
+  if(!t||refresh)return _mxlStart(c,topic,refresh);
+  try{
+    var slug=lxSlug(t);
+    fbGet('/learnai/lessons/'+slug).then(function(L){
+      if(mxlJunkLesson(L)){
+        try{fbDel('/learnai/lessons/'+slug)['catch'](function(){});}catch(e){}
+        _mxlStart(c,topic,true);
+      }else{
+        _mxlStart(c,topic,refresh);
+      }
+    })['catch'](function(){_mxlStart(c,topic,refresh);});
+    return;
+  }catch(e){}
+  return _mxlStart(c,topic,refresh);
+};
+/* last guard: strip the junk step out of any lesson that still reaches the screen */
+try{
+  var _mxlRender=lxRenderLesson;
+  lxRenderLesson=function(c){
+    try{
+      if(LX&&LX.lesson&&LX.lesson.steps&&LX.lesson.steps.length){
+        LX.lesson.steps=LX.lesson.steps.filter(function(s){
+          return !/is math\?!|is secretly/i.test(String((s&&s.title)||'')+' '+String((s&&s.body)||''));
+        });
+        if(!LX.lesson.steps.length)LX.lesson.steps=[{title:'Start here',body:'Let us take this one small step at a time.'}];
+      }
+    }catch(e){}
+    return _mxlRender(c);
+  };
+}catch(e){}
 </script>
 </body>
 </html>
