@@ -1,10 +1,29 @@
 <Window x:Class="MatixTheMathClub.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Matix the Math Club"
         Icon="/Assets/icon.png"
         Width="1280" Height="820"
+        MinWidth="720" MinHeight="520"
+        Background="#283F71"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        UseLayoutRounding="True"
         WindowStartupLocation="CenterScreen">
+
+    <!-- No native title bar: the app draws its own bar inside the page.
+         CaptionHeight=0 means Windows never steals clicks from our HTML bar,
+         ResizeBorderThickness keeps normal edge resizing + Aero snap. -->
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            NonClientFrameEdges="None"
+                            UseAeroCaptionButtons="False"
+                            ResizeBorderThickness="6" />
+    </shell:WindowChrome.WindowChrome>
+
     <wv2:WebView2 x:Name="Browser" />
 </Window>

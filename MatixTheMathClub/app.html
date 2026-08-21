@@ -10044,7 +10044,7 @@ var MXAI_FACTS=[
  'A \u201cgoogol\u201d is 10\u00b9\u2070\u2070 \u2014 more than the atoms in the observable universe.',
  'The equals sign = was invented in 1557 because a mathematician was tired of writing \u201cis equal to\u201d.'
 ];
-MXAI_CHIPS=['what is a potato','how to play minecraft','capital of Japan','47 in roman','/web black holes','solve 2x + 5 = 13','what is photosynthesis','capital of France'];
+MXAI_CHIPS=['give me an example','how to play minecraft','what is a potato','24 candies minus 9','capital of Japan','/google black holes','solve 2x + 5 = 13','fractions example'];
 
 var MXCONV={km:['len',1000],kilometer:['len',1000],kilometre:['len',1000],mile:['len',1609.344],mi:['len',1609.344],m:['len',1],meter:['len',1],metre:['len',1],ft:['len',0.3048],foot:['len',0.3048],feet:['len',0.3048],cm:['len',0.01],mm:['len',0.001],inch:['len',0.0254],inche:['len',0.0254],'in':['len',0.0254],kg:['mass',1000],kilogram:['mass',1000],lb:['mass',453.592],pound:['mass',453.592],g:['mass',1],gram:['mass',1],oz:['mass',28.3495],ounce:['mass',28.3495],l:['vol',1],liter:['vol',1],litre:['vol',1],gallon:['vol',3.78541],gal:['vol',3.78541],ml:['vol',0.001],hour:['time',3600],hr:['time',3600],minute:['time',60],min:['time',60],second:['time',1],sec:['time',1],day:['time',86400],week:['time',604800]};
 function mx4Unit(u){u=String(u||'').toLowerCase();if(MXCONV[u])return u;if(u.slice(-1)==='s'&&MXCONV[u.slice(0,-1)])return u.slice(0,-1);if(u==='feet')return 'foot';return null;}
@@ -11524,7 +11524,8 @@ function mxBuildRichLesson(topic, webs, owners) {
 }
 
 
-/* ---- OWNER ONLY SPECIAL COMMANDS GUARD ---- */
+/* ---- OUTMOST ANSWER LAYER ---- */
+/* owner-only commands + search commands + NEVER the "everything is math" lesson prompt */
 function mxIsOwnerUser(){
   try{
     if(typeof isOwner==='function'&&isOwner())return true;
@@ -11532,77 +11533,146 @@ function mxIsOwnerUser(){
   }catch(e){}
   return false;
 }
-
-/* ---- OUTMOST ANSWER LAYER ---- */
+/* strip command words + filler so "/google important stuff about black hole" -> "black hole" */
+function mxSearchTerm(raw){
+  var t=String(raw||'').trim();
+  t=t.replace(/^\/?(google|search|web|lookup|look\s*up|find|browse|internet)\b/i,'');
+  t=t.replace(/^\s*(?:the\s+web|online|internet)\b/i,'');
+  t=t.replace(/^\s*(?:for|about|on|me|up)\b/i,'');
+  var prev=null;
+  while(prev!==t){
+    prev=t;
+    t=t.replace(/^\s*(important|interesting|cool|useful|some|more|all|any|the|a|an|stuff|things?|info|information|facts?|details?|data|about|regarding|on|for|me|please|pls)\b/i,'');
+  }
+  t=t.replace(/^(what is|what are|what's|whats|who is|who was|who's|tell me about|explain|define|describe|how to play|how do you play|how do i play|how to|how do i|how do you)\b/i,'');
+  return t.replace(/[?!.]+$/,'').replace(/\s+/g,' ').trim();
+}
+function mxWebSearch(term,extraFallback){
+  var t=mxSearchTerm(term)||String(term||'').trim();
+  if(typeof navigator!=='undefined'&&!navigator.onLine){
+    var off=null;
+    try{off=mxkbLookup(t);}catch(e){}
+    return off||("\uD83D\uDCE1 You are offline \u2014 but I still know 13,000+ things by heart. Ask me anything, like <b>what is a potato</b> or <b>capital of Japan</b>.");
+  }
+  try{
+    var fb=extraFallback||null;
+    if(!fb){try{fb=mxkbLookup(t);}catch(e){}}
+    if(!fb)fb="\uD83C\uDF10 The web did not answer about <b>"+mxkbEsc(t)+"</b>. Try fewer words \u2014 like <b>"+mxkbEsc(t.split(' ').slice(0,2).join(' '))+"</b>.";
+    mx7Web(t,fb);
+    return {html:'<span class="mx7-pending">\uD83C\uDF10 Searching the web for <b>'+mxkbEsc(t)+'</b>\u2026</span>'};
+  }catch(e){}
+  return null;
+}
+/* the AI's own example list \u2014 no club member names */
+function mxAiHelp(){
+  return "\uD83E\uDDE0 <b>Here is what I can do</b><br>"
+   +"\u2022 <b>Anything questions</b> \u2014 \u201cwhat is a potato\u201d \u00b7 \u201chow to play minecraft\u201d \u00b7 \u201cwhy is the sky blue\u201d<br>"
+   +"\u2022 <b>Math</b> \u2014 \u201c24 candies minus 9\u201d \u00b7 \u201csolve 2x + 5 = 13\u201d \u00b7 \u201c\u221a144\u201d<br>"
+   +"\u2022 <b>Word problems</b> \u2014 \u201c4 boxes of 6 chocolates\u201d \u00b7 \u201c85% of 20 questions\u201d<br>"
+   +"\u2022 <b>Facts</b> \u2014 \u201ccapital of Japan\u201d \u00b7 \u201celement 79\u201d \u00b7 \u201c47 in roman\u201d \u00b7 \u201chow many moons does Saturn have\u201d<br>"
+   +"\u2022 <b>Live web</b> \u2014 \u201c/google black holes\u201d \u00b7 \u201csearch the web for the Eiffel Tower\u201d<br>"
+   +"\u2022 <b>Examples on demand</b> \u2014 \u201cgive me an example\u201d \u00b7 \u201cfractions example\u201d"
+   +(mxIsOwnerUser()?"<br>\u2022 <b>Owner only</b> \u2014 <code>/brain</code> \u00b7 <code>/teach x = y</code> \u00b7 <code>/show mem</code> \u00b7 <code>/forget x</code>":"");
+}
+/* example generator \u2014 plain examples, no names */
+function mxAiExample(topic){
+  var t=String(topic||'').toLowerCase();
+  if(/fraction/.test(t))
+    return "\uD83D\uDCD8 <b>Fractions example</b><br>A pizza is cut into 8 equal slices and 3 slices are taken.<br>\u2022 Taken = <b>3/8</b>, left = <b>5/8</b>.<br>\u2022 3/8 + 5/8 = 8/8 = <b>1 whole pizza</b> \uD83C\uDF55";
+  if(/percent/.test(t))
+    return "\uD83D\uDCD8 <b>Percent example</b><br>A score of 85% on a 20-question quiz.<br>\u2022 85% of 20 = (85 \u00d7 20) \u00f7 100 = <b>17 correct</b> \u2b50";
+  if(/equation|algebra|solve for/.test(t))
+    return "\uD83D\uDCD8 <b>Algebra example</b><br>A number is doubled, then 5 is added, giving 25.<br>\u2022 2x + 5 = 25 \u2192 2x = 20 \u2192 <b>x = 10</b> \u2728";
+  if(/ratio/.test(t))
+    return "\uD83D\uDCD8 <b>Ratio example</b><br>20 stickers are shared in the ratio 3:2.<br>\u2022 5 parts, each part = 4 \u2192 <b>12</b> and <b>8</b> \uD83C\uDFA8";
+  if(/multipl|times table/.test(t))
+    return "\uD83D\uDCD8 <b>Multiplication example</b><br>4 boxes with 6 chocolates each.<br>\u2022 4 \u00d7 6 = <b>24 chocolates</b> \uD83C\uDF6B";
+  if(/divid|share/.test(t))
+    return "\uD83D\uDCD8 <b>Division example</b><br>24 cookies shared between 6 people.<br>\u2022 24 \u00f7 6 = <b>4 cookies each</b> \uD83C\uDF6A";
+  if(/area|geometry|rectangle|circle/.test(t))
+    return "\uD83D\uDCD8 <b>Geometry example</b><br>A poster is 8 cm by 5 cm.<br>\u2022 Area = 8 \u00d7 5 = <b>40 cm\u00b2</b><br>\u2022 Border (perimeter) = 2 \u00d7 (8+5) = <b>26 cm</b> \uD83D\uDCD0";
+  var a=12+Math.floor(Math.random()*15), b=5+Math.floor(Math.random()*10);
+  return "\uD83D\uDCD8 <b>Example</b><br>A jar holds "+a+" gems, then "+b+" more are added.<br>\u2022 "+a+" + "+b+" = <b>"+(a+b)+" gems</b> \uD83D\uDC8E<br><small>ask for another one anytime \u2014 or say \u201cfractions example\u201d, \u201cpercent example\u201d\u2026</small>";
+}
+/* old names kept alive so nothing else breaks */
+var mxDahliaHelp=mxAiHelp, mxDahliaExample=mxAiExample;
 try{
   var _mxkbPrev=mxaiAnswer;
   mxaiAnswer=function(qRaw){
     var q=String(qRaw||"").trim();
-    if(!q)return "Ask me anything!";
+    if(!q)return "Ask me anything! Try <b>what is a potato</b> or <b>give me an example</b>.";
+    var low=q.toLowerCase();
 
-    // Special owner-only commands
-    var isMemCmd = /^\/?(show|see|view)?\s*mem(ory)?\b/i.test(q) || /^what do you remember/i.test(q) || /^\/?(teach|forget)\b/i.test(q);
-    var isBrainCmd = /^\/brain\b/i.test(q);
-
-    if(isBrainCmd || isMemCmd){
-      if(!mxIsOwnerUser()){
-        return "🔒 <b>Owner-only command</b><br>Only @ghadi (the club owner) can view internal brain stats or teach new permanent memory. Ask Ghadi to teach me this!";
-      }
-      if(isBrainCmd) return mxkbStats();
+    /* ---- owner-only commands ---- */
+    var isMemCmd=/^\/?(show|see|view)\s*mem(ory)?\b/i.test(q)||/^\/mem\b/i.test(q)||/^what do you remember/i.test(q)||/^\/?(teach|forget)\b/i.test(q);
+    var isBrainCmd=/^\/brain\b/i.test(q);
+    if(isBrainCmd||isMemCmd){
+      if(!mxIsOwnerUser())
+        return "\uD83D\uDD12 <b>Owner-only command</b><br>Only @ghadi can open my brain stats or teach me permanent memory. Ask Ghadi \uD83D\uDC51";
+      if(isBrainCmd)return mxkbStats();
       try{var cmd=mxmemCommand(q);if(cmd)return cmd;}catch(e){}
     }
 
-    // Check taught memory (accessible to all members to read)
+    /* ---- what the club taught me ---- */
     try{
       var hit=mxmemFind(q);
-      if(hit)return mxkbEsc(hit.a)+"<br><small>🧠 "+mxkbEsc(hit.by||"the club")+" taught me this</small>";
+      if(hit)return mxkbEsc(hit.a)+"<br><small>\uD83E\uDDE0 "+mxkbEsc(hit.by||"the club")+" taught me this</small>";
     }catch(e){}
 
-    // Explicit /web search command
-    var w=q.match(/^\/web\s+(.+)$/i);
-    if(w){
-      var term=w[1].trim();
-      if(typeof navigator!=="undefined"&&!navigator.onLine)return "📡 You are offline right now — ask me anything from the built-in club knowledge!";
-      try{
-        var fb="🌐 The web did not answer in time — try asking in a different way!";
-        var kbFb=mxkbLookup(term);if(kbFb)fb=kbFb;
-        mx7Web(term,fb);
-        return {html:'<span class="mx7-pending">🌐 Searching the web for <b>'+mxkbEsc(term)+'</b>…</span>'};
-      }catch(e){}
+    /* ---- help / capability list ---- */
+    if(/^\/?(help|commands?)$/i.test(low)||/^what can you do/.test(low)||/^how do you work/.test(low))return mxDahliaHelp();
+
+    /* ---- examples on demand ---- */
+    if(/(give|show|make|tell)\s+(me\s+)?(an?\s+)?(other\s+|another\s+)?examples?\b/.test(low)||/^examples?\b/.test(low)||/\bexample\s+(please|pls)\b/.test(low)||/\b(an?\s+)?example\s+(of|with|for)\b/.test(low))
+      return mxDahliaExample(low);
+
+    /* ---- explicit search commands: /web /google /search, "search the web for X", "google X" ---- */
+    if(/^\/?(web|google|search|lookup|look\s*up)\b/i.test(q)||/^(search|google|look\s*up)\s+/i.test(low)){
+      var r=mxWebSearch(q);
+      if(r)return r;
     }
 
-    // Built-in Knowledge Base lookup
+    /* ---- built-in encyclopedia / exact answers ---- */
+    try{var kb=mxkbLookup(q);if(kb)return kb;}catch(e){}
     try{
-      var kb=mxkbLookup(q);
-      if(kb)return kb;
+      var subj=(typeof mxkbSubject==='function')?mxkbSubject(q):'';
+      var pe=(typeof mxkbPedia==='function')?mxkbPedia(subj):null;
+      if(pe)return mxkbCard(pe.title,pe.text);
     }catch(e){}
 
-    // Try underlying Math/Conversation engine
-    var mathRes=null;
-    try{
-      mathRes=_mxkbPrev.apply(null,arguments);
-    }catch(e){mathRes=null;}
+    /* ---- math + conversation engine ---- */
+    var res=null;
+    try{res=_mxkbPrev.apply(null,arguments);}catch(e){res=null;}
 
-    // If math engine returned a standard fallback or no match, automatically search the live web
-    var isFallback = !mathRes || (typeof mathRes==='string' && (mathRes.indexOf("math brain")>-1 || mathRes.indexOf("try:")>-1 || mathRes==="🧮" || mathRes.length<5));
-    if(isFallback && typeof navigator!=="undefined" && navigator.onLine){
-      var cleanTerm = q.replace(/^(what is|what are|who is|who was|tell me about|how to|define|explain)\s+/i,"").replace(/[?!.]+$/,"").trim();
-      if(cleanTerm.length >= 2){
-        try{
-          var fbMsg="🌐 Could not find information on <b>"+mxkbEsc(cleanTerm)+"</b> on the live web. Try asking @ghadi to /teach me!";
-          mx7Web(cleanTerm, fbMsg);
-          return {html:'<span class="mx7-pending">🌐 Searching the web for <b>'+mxkbEsc(cleanTerm)+'</b>…</span>'};
-        }catch(e){}
+    /* the old layers loved answering "everything is math, want a lesson?" \u2014 never show that in chat */
+    var isJunk=false;
+    try{
+      if(!res)isJunk=true;
+      else if(typeof res==='string'){
+        isJunk=/everything is math|math brain|I spy numbers|Ask me anything/i.test(res)||res.length<6;
+      }else if(res&&typeof res==='object'){
+        var lbl=(res.action&&res.action.label)||'';
+        var htm=res.html||'';
+        isJunk=/lesson/i.test(lbl)||/everything is math|want me to prove it/i.test(htm);
       }
-    }
+    }catch(e){}
 
-    return mathRes || "🧠 I didn't catch that — try asking about math, science, geography, gaming, or anything on the web!";
+    if(isJunk){
+      var term=mxSearchTerm(q);
+      if(term){
+        try{var kb2=mxkbLookup(term);if(kb2)return kb2;}catch(e){}
+        try{var pe2=(typeof mxkbPedia==='function')?mxkbPedia(term):null;if(pe2)return mxkbCard(pe2.title,pe2.text);}catch(e){}
+        var w=mxWebSearch(term,"\uD83E\uDDE0 I could not find <b>"+mxkbEsc(term)+"</b> in my brain or on the web. Ask @ghadi to <code>/teach</code> me, or try <b>give me an example</b>!");
+        if(w)return w;
+      }
+      return "\uD83E\uDDE0 I did not catch that one. Try <b>what is a potato</b>, <b>how to play minecraft</b>, <b>capital of Japan</b>, <b>solve 2x + 5 = 13</b>, or <b>give me an example</b> \uD83C\uDF38";
+    }
+    return res;
   };
 }catch(e){}
 
 /* ---- MATH LEARN: DEEP THINKING & SYNTHESIS ---- */
 try{
-  // 1) Full extract Wikipedia + Club knowledge synthesis
   var _mxkbWiki=lxWiki;
   lxWiki=function(host,topic){
     var subj=mxkbSubject(topic),pe=mxkbPedia(subj);
@@ -11620,7 +11690,6 @@ try{
       })["catch"](function(){return _mxkbWiki(host,topic);});
   };
 
-  // 2) lxBuildLesson: Guarantee 5 seconds of thinking & rich structure
   var _origBuildLesson = lxBuildLesson;
   lxBuildLesson=function(topic,onStage){
     var startTime = Date.now();
@@ -11644,15 +11713,14 @@ try{
         var kbLesson = JSON.parse(JSON.stringify(kb));
         delete kbLesson.gen;
         if(LX_GEN && LX_GEN[kb.gen]) kbLesson.exercises = LX_GEN[kb.gen]();
-        // Enrich KB lesson with common mistakes & glossary if missing
         if(!kbLesson.mistakes||!kbLesson.mistakes.length) kbLesson.mistakes = richLesson.mistakes;
         if(!kbLesson.glossary||!kbLesson.glossary.length) kbLesson.glossary = richLesson.glossary;
+        if(richLesson.examples&&richLesson.examples.length) kbLesson.examples = richLesson.examples;
         richLesson = kbLesson;
       }
 
       stage(4);
 
-      // Ensure at least 5000ms (5 seconds) thinking time
       var elapsed = Date.now() - startTime;
       var remaining = Math.max(0, 5200 - elapsed);
 
@@ -11664,7 +11732,6 @@ try{
     });
   };
 
-  // 3) Hook Quiz Completion to Notify Owner (@ghadi)
   var _origRenderScore = lxRenderScore;
   lxRenderScore=function(c){
     _origRenderScore(c);
@@ -11673,7 +11740,6 @@ try{
       var learner = (typeof ME==='string'&&ME)?ME:'guest';
       var topicName = (L.title||L.topic||'General Lesson');
 
-      // Send Firebase notification to owner @ghadi
       if(typeof fbPost==='function'){
         var notifData = {
           type: 'quiz_result',
@@ -11689,6 +11755,271 @@ try{
       }
     }catch(err){}
   };
+}catch(e){}
+
+
+/* ---- SINGLE WINDOW BAR FIX: our custom bar is the only bar, and it works ---- */
+(function(){
+  var ua = navigator.userAgent || '';
+  var W2 = !!(window.chrome && window.chrome.webview);            /* Windows WebView2 shell */
+  var MACNAT = /Macintosh/.test(ua) && location.protocol === 'file:'; /* macOS WKWebView shell */
+
+  function send(m){ try{ window.chrome.webview.postMessage(m); }catch(e){} }
+
+  var st = document.createElement('style');
+  st.textContent =
+    /* macOS keeps its traffic lights: leave room for them, hide our duplicates */
+    'body.mac-native .tb-left{padding-left:80px}' +
+    'body.mac-native #tbMin,body.mac-native #tbMax,body.mac-native #tbClose{display:none!important}' +
+    /* Windows: our bar is the real title bar now */
+    'body.win-native #titlebar{cursor:default}' +
+    'body.win-native #tbMin,body.win-native #tbMax,body.win-native #tbClose{display:flex!important}' +
+    'body.win-max #titlebar{border-radius:0}';
+  document.head.appendChild(st);
+
+  if (MACNAT) document.body.classList.add('desktop','mac-native');
+  if (!W2) return;
+
+  document.body.classList.add('desktop','win-native');
+
+  var bar = document.getElementById('titlebar');
+  if (!bar) return;
+
+  /* anything clickable in the bar must NOT start a window drag */
+  function interactive(t){
+    while (t && t !== bar){
+      var tag = (t.tagName || '').toUpperCase();
+      if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'A' || tag === 'SELECT') return true;
+      var cn = (typeof t.className === 'string') ? t.className : '';
+      if (/tb-btn|tb-ico-btn|tb-tabs|\btab\b|tab-add|tb-close/.test(cn)) return true;
+      t = t.parentNode;
+    }
+    return false;
+  }
+
+  bar.addEventListener('mousedown', function(e){
+    if (e.button !== 0) return;
+    if (interactive(e.target)) return;
+    send('matix:drag');
+  });
+
+  bar.addEventListener('dblclick', function(e){
+    if (interactive(e.target)) return;
+    send('matix:togglemax');
+  });
+
+  var mn = document.getElementById('tbMin'),
+      mx = document.getElementById('tbMax'),
+      cl = document.getElementById('tbClose');
+
+  if (mn) mn.onclick = function(e){ e.stopPropagation(); send('matix:minimize'); };
+  if (mx) mx.onclick = function(e){ e.stopPropagation(); send('matix:togglemax'); };
+  if (cl) cl.onclick = function(e){
+    e.stopPropagation();
+    if (typeof customConfirm === 'function'){
+      customConfirm('Close Matix? Any unsaved work in an open tab will be lost.',
+        function(){ send('matix:close'); }, { icon:'\uD83D\uDC4B', okText:'Close app' });
+    } else { send('matix:close'); }
+  };
+
+  /* the shell calls this so the middle button shows the right icon */
+  window.mxSetMaximized = function(v){
+    v = !!v;
+    if (mx){ mx.textContent = v ? '\u2750' : '\u2610'; mx.title = v ? 'Restore' : 'Maximize'; }
+    document.body.classList[v ? 'add' : 'remove']('win-max');
+  };
+
+  /* reload button is ours too - make sure it is alive in this shell */
+  var rl = document.getElementById('tbReload');
+  if (rl && !rl.onclick && typeof reloadActiveTab === 'function') rl.onclick = reloadActiveTab;
+})();
+
+
+/* ================= MEMORY RECALL FIX =================
+   Bug 1: /teach without "=" stored a FACT, but mxmemFind only searched
+          taught Q->A pairs, so the fact could never be recalled.
+   Bug 2: with no memory hit, the old mathify layer answered
+          "Fun fact: birthday is secretly math" in chat.
+   ===================================================== */
+try{
+
+/* ---- question words we ignore when matching a memory ---- */
+var MXQW=['when','what','whats','where','who','whos','which','why','how','is','are','was','were','do','does','did','can','could','tell','me','about','you','know','please','pls','the','a','an','of','for','on','at','in','to','and','many','much','old','again'];
+function mxMemClean(q){
+  var k=(typeof mxmemKey==='function')?mxmemKey(q):String(q||'').toLowerCase();
+  var toks=k.split(' ').filter(function(w){return w&&w.length>1;});
+  /* strip leading question words only, so "when is matix birthday" -> "matix birthday" */
+  while(toks.length&&MXQW.indexOf(toks[0])>-1)toks.shift();
+  return toks.join(' ');
+}
+function mxMemToks(s){
+  return String(s||'').split(' ').filter(function(w){return w.length>2&&MXQW.indexOf(w)<0;});
+}
+
+/* ---- smarter recall: taught pairs AND remembered facts ---- */
+mxmemFind=function(q){
+  try{
+    if(!window.MXMEM)return null;
+    var raw=(typeof mxmemKey==='function')?mxmemKey(q):String(q||'').toLowerCase();
+    var clean=mxMemClean(q);
+    var T=MXMEM.taught||{}, F=MXMEM.facts||[];
+
+    /* 1. exact key hit, raw or cleaned */
+    if(T[raw])return T[raw];
+    if(clean&&T[clean])return T[clean];
+
+    var qs=mxMemToks(clean.length?clean:raw);
+    if(!qs.length)return null;
+
+    /* 2. taught pairs: subset match, then best overlap */
+    var best=null,bestScore=0;
+    Object.keys(T).forEach(function(key){
+      var ks=mxMemToks(key);
+      if(!ks.length)return;
+      var hit=0;
+      qs.forEach(function(w){if(ks.indexOf(w)>-1)hit++;});
+      if(!hit)return;
+      /* every word of the question appears in the key, or vice versa */
+      var coversQ=(hit===qs.length), coversK=(hit===ks.length);
+      var score=coversQ||coversK?1:(hit/Math.max(qs.length,ks.length));
+      if(score>bestScore){bestScore=score;best=T[key];}
+    });
+    if(best&&bestScore>=0.6)return best;
+
+    /* 3. remembered facts (this is what was completely missing) */
+    if(qs.length>=2){
+      var fBest=null,fScore=0;
+      F.forEach(function(f){
+        var fs=mxMemToks((typeof mxmemKey==='function')?mxmemKey(f):String(f).toLowerCase());
+        if(!fs.length)return;
+        var hit=0;
+        qs.forEach(function(w){if(fs.indexOf(w)>-1)hit++;});
+        var cover=hit/qs.length;      /* how much of the question the fact covers */
+        if(cover>fScore){fScore=cover;fBest=f;}
+      });
+      if(fBest&&fScore>=0.75)return {q:'',a:fBest,by:'the club',fact:true};
+    }
+    return null;
+  }catch(e){return null;}
+};
+
+/* ---- teaching a sentence also creates a real question -> answer pair ---- */
+function mxMemLearnSentence(body){
+  try{
+    var s=String(body||'').trim().replace(/^that\s+/i,'');
+    if(!s)return null;
+    var m=s.match(/^([\s\S]{2,70}?)\s+\b(is|are|was|were)\b\s+([\s\S]+)$/i);
+    if(!m)return null;
+    var subj=m[1].trim().replace(/^(the|a|an)\s+/i,''), verb=m[2], rest=m[3].trim();
+    if(!subj||!rest)return null;
+    if(subj.split(/\s+/).length>6)return null;      /* too long to be a subject */
+    var key=(typeof mxmemKey==='function')?mxmemKey(subj):subj.toLowerCase();
+    if(!key)return null;
+    var answer=subj.charAt(0).toUpperCase()+subj.slice(1)+' '+verb+' '+rest;
+    MXMEM.taught=MXMEM.taught||{};
+    MXMEM.taught[key]={q:subj.slice(0,160),a:answer.slice(0,600),by:(typeof mxmemWho==='function')?mxmemWho():'the club',at:Date.now()};
+    return {subj:subj,answer:answer};
+  }catch(e){return null;}
+}
+
+/* ---- wrap the teach command so plain sentences become recallable ---- */
+try{
+  var _mxmemCmdPrev=mxmemCommand;
+  mxmemCommand=function(qRaw){
+    var raw=String(qRaw||'').trim();
+    var out=_mxmemCmdPrev.apply(null,arguments);
+    try{
+      var m=raw.match(/^\/?teach\b[:\s]*([\s\S]*)$/i);
+      if(m&&out&&typeof out==='string'&&/I will remember|Got it/i.test(out)){
+        var body=String(m[1]||'').trim();
+        if(body.indexOf('=')<0&&!/^me\s+/i.test(body)){
+          var made=mxMemLearnSentence(body);
+          if(made){
+            if(typeof mxmemPush==='function')mxmemPush();
+            return '\u2705 <b>Learned it!</b><br>Ask me <b>'+mxmemEsc(made.subj)+'</b> \u2014 even as \u201cwhen is '+mxmemEsc(made.subj)+'\u201d \u2014 and I will answer:<br>\u201c'+mxmemEsc(made.answer)+'\u201d<br><small>Taught by '+mxmemEsc((typeof mxmemWho==='function')?mxmemWho():'you')+' \u00b7 '+((typeof mxmemCount==='function')?mxmemCount():0)+' thing(s) in memory \u00b7 <code>/show mem</code></small>';
+          }
+        }
+      }
+    }catch(e){}
+    return out;
+  };
+}catch(e){}
+
+/* ---- one-time repair: facts taught before this fix become recallable too ---- */
+function mxMemRepair(){
+  try{
+    if(!window.MXMEM||!MXMEM.facts||!MXMEM.facts.length)return 0;
+    var added=0;
+    MXMEM.facts.forEach(function(f){
+      var key=(typeof mxmemKey==='function')?mxmemKey(String(f).split(/\b(is|are|was|were)\b/)[0]||''):'';
+      if(key&&MXMEM.taught&&MXMEM.taught[key])return;
+      if(mxMemLearnSentence(f))added++;
+    });
+    return added;
+  }catch(e){return 0;}
+}
+setTimeout(mxMemRepair,1500);
+setTimeout(mxMemRepair,6000);
+
+/* ---- outermost layer: memory wins, and mathify junk never reaches chat ---- */
+try{
+  var _mxFixPrev=mxaiAnswer;
+  mxaiAnswer=function(qRaw){
+    var q=String(qRaw||'').trim();
+    var low=q.toLowerCase();
+
+    /* never intercept commands - they must reach their own handlers */
+    var isCmd=/^\//.test(q)||/^(teach|forget|remember)\b/i.test(q);
+
+    /* memory first: taught answers and remembered facts */
+    if(!isCmd){
+      try{
+        mxMemRepair();
+        var hit=mxmemFind(q);
+        if(hit&&hit.a){
+          return mxmemEsc(hit.a)+'<br><small>\uD83E\uDDE0 '+mxmemEsc(hit.by||'the club')+' taught me this \u00b7 <code>/show mem</code></small>';
+        }
+      }catch(e){}
+    }
+
+    var res=null;
+    try{res=_mxFixPrev.apply(null,arguments);}catch(e){res=null;}
+
+    /* the mathify layer loves "X is secretly math" - block it in chat */
+    var junk=false;
+    try{
+      if(typeof res==='string'){
+        junk=(/fun fact/i.test(res)&&/is secretly/i.test(res))||/everything is math if you look closely/i.test(res);
+      }else if(res&&typeof res==='object'){
+        var htm=String(res.html||'');
+        var lbl=String((res.action&&res.action.label)||'');
+        junk=(/fun fact/i.test(htm)&&/is secretly/i.test(htm))
+          ||/everything is math if you look closely|want me to prove it/i.test(htm)
+          ||(/^\s*\S*\s*(make|learn)\b/i.test(lbl)&&/is secretly/i.test(htm));
+      }
+    }catch(e){junk=false;}
+    if(!junk)return res;
+
+    /* real answer instead: encyclopedia, then live web */
+    var clean=mxMemClean(q)||q;
+    try{var kb=mxkbLookup(q);if(kb)return kb;}catch(e){}
+    try{var kb2=mxkbLookup(clean);if(kb2)return kb2;}catch(e){}
+    try{
+      var subj=(typeof mxkbSubject==='function')?mxkbSubject(clean):'';
+      var pe=(typeof mxkbPedia==='function')?mxkbPedia(subj):null;
+      if(pe)return mxkbCard(pe.title,pe.text);
+    }catch(e){}
+    if(navigator.onLine!==false){
+      try{var w=mxWebSearch(clean);if(w)return w;}catch(e){}
+    }
+    return '\uD83E\uDDE0 I do not know <b>'+mxmemEsc(clean)+'</b> yet'
+      +(( typeof mxIsOwnerUser==='function'&&mxIsOwnerUser())
+        ?' \u2014 teach me: <code>/teach '+mxmemEsc(clean)+' = your answer</code>'
+        :' \u2014 ask Ghadi to teach me!')
+      +'<br><small>Or try \u201c/google '+mxmemEsc(clean)+'\u201d for a live web search.</small>';
+  };
+}catch(e){}
+
 }catch(e){}
 
 </script>
