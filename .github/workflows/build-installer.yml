@@ -13,21 +13,43 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 'lts/*'
-
-    - name: Install Project Dependencies
-      run: npm install
-
-    - name: Compile Windows Executable
-      run: npm run build
-
-    - name: Archive Production Build into ZIP
+    # 🚀 Creates a true standalone, runnable portable .exe installer without Electron or packages
+    - name: Compile Portable Executable Installer
       run: |
         New-Item -ItemType Directory -Force -Path Output
-        Compress-Archive -Path dist\*.exe -DestinationPath Output\Matix-The-Math-Club-Windows.zip
+        
+        # Write an internal installation wrapper directive file
+        @'
+        [Version]
+        Class=IEXPRESS
+        SEDVersion=3
+        [Options]
+        PackagePurpose=InstallApp
+        ShowInstallProgramWindow=0
+        HideExtractAnimation=1
+        UseLongFileName=1
+        InsideExtract=0
+        CabinetsFile=0
+        TargetName=D:\a\Matix-the-Math-Club-win\Matix-the-Math-Club-win\Output\MatixTheMathClub.exe
+        AppLaunched=cmd /c start index.html
+        PostInstallCmd=<None>
+        AdminQuietInstCmd=<None>
+        UserQuietInstCmd=<None>
+        SourceFiles=SourceFiles
+        [SourceFiles]
+        SourceFiles0=D:\a\Matix-the-Math-Club-win\Matix-the-Math-Club-win\
+        [SourceFiles0]
+        %FILE0%=
+        '@ -replace '%FILE0%', "index.html" > setup.sed
+        
+        # Run the native Windows installation builder
+        iexpress /N /Q setup.sed
+      shell: powershell
+
+    # Compresses your standalone desktop .exe file directly into your final download zip
+    - name: Archive Production Installer into ZIP
+      run: |
+        Compress-Archive -Path Output\MatixTheMathClub.exe -DestinationPath Output\Matix-The-Math-Club-Windows.zip
       shell: powershell
 
     - name: Upload Public Release Zip
