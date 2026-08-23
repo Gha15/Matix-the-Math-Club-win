@@ -5,10 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "mkdir dist && echo 'Dummy App Content' > dist\\MyWindowsApp.exe",
-    "watch": "nodemon --watch . --ext * --exec \"npm run auto-commit\"",
-    "auto-commit": "git add . && git commit -m \"fixed a thing\" && git push origin master"
+    "commit": "git add . && git commit -m \"fixed a thing\" && git push origin master"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
-  }
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

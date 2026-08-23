@@ -38,4 +38,3 @@ jobs:
       with:
         name: Matix-Math-Club-Windows-Release
         path: Output/*.zip
- 
