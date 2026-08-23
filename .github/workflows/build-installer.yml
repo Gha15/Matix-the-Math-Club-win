@@ -15,10 +15,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Node.js 26
+    # 🚀 FIX: Automatically uses the modern stable Node.js runner to clear warning logs
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '26'
+        node-version: 'lts/*' 
 
     - name: Install Dependencies
       run: npm install
@@ -26,7 +27,6 @@ jobs:
     - name: Build Application Production Files
       run: npm run build
 
-    # 📁 FIX: Creates the Output folder first so the zip tool has a destination path
     - name: Archive Production Build into ZIP
       run: |
         New-Item -ItemType Directory -Force -Path Output
