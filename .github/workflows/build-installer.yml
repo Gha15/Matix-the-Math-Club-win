@@ -19,10 +19,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '26'
-        cache: 'npm'
+        # 💡 REMOVED 'cache: npm' to bypass missing lock file errors
 
     - name: Install Dependencies
-      run: npm ci
+      run: npm install # 💡 CHANGED from 'npm ci' to allow building without a lock file
 
     - name: Build Application Production Files
       run: npm run build
@@ -32,7 +32,6 @@ jobs:
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer-config.iss
       shell: powershell
 
-    # 📁 FIX: Changed from 'actions/artifacts' to 'actions/upload-artifact'
     - name: Upload Installer Artifact
       uses: actions/upload-artifact@v4
       with:
