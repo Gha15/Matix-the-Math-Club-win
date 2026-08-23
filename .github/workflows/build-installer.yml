@@ -18,15 +18,14 @@ jobs:
       with:
         node-version: 'lts/*'
 
-    # 🚀 FIX: Force installs the explicit compilation tools inside the cloud workspace folder
-    - name: Initialize Packaging Dependencies
+    # 🚀 FIX: Uses a streamlined packaging engine to instantly compile a standalone .exe file
+    - name: Compile Standalone Windows Executable
       run: |
-        npm init -y
-        npm install --save-dev electron@^31.0.0 electron-builder@^24.13.3
+        npm install -g nativefier
+        nativefier --name "MatixTheMathClub" --platform "windows" --portable "." dist/
+      shell: powershell
 
-    - name: Compile Windows Standalone Installer
-      run: npx electron-builder build --win portable --publish never
-
+    # 📁 Grabs ONLY the final runnable .exe file and packages it inside your clean ZIP container
     - name: Archive EXE Installer into ZIP
       run: |
         New-Item -ItemType Directory -Force -Path Output
