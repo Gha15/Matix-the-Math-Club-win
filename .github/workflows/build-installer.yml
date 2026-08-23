@@ -26,13 +26,13 @@ jobs:
     - name: Build Application Production Files
       run: npm run build
 
-    # Compresses your compiled production application files directly into a secure .zip file
+    # 📁 FIX: Creates the Output folder first so the zip tool has a destination path
     - name: Archive Production Build into ZIP
       run: |
+        New-Item -ItemType Directory -Force -Path Output
         Compress-Archive -Path dist\* -DestinationPath Output\Matix-The-Math-Club-Windows.zip
       shell: powershell
 
-    # Uploads the safe zip folder for your public users to download
     - name: Upload Public Release Zip
       uses: actions/upload-artifact@v4
       with:
