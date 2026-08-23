@@ -1,8 +1,12 @@
 {
-  "name": "matix-the-math-club-windows",
+  "name": "matix-the-math-club",
   "version": "1.0.0",
+  "description": "Matix the Math Club App",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "echo 'Add your compilation command here' && mkdir dist" 
-  }
+    "build": "mkdir dist && echo 'Dummy App Content' > dist\\MyWindowsApp.exe"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
