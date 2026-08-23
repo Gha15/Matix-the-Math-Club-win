@@ -16,7 +16,11 @@
     },
     "files": [
       "index.js",
-      "package.json"
+      "package.json",
+      "**/*",
+      "!dist/${/*}",
+      "!.git/${/*}",
+      "!.github/${/*}"
     ],
     "win": {
       "target": "portable" 
