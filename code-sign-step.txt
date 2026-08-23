@@ -1,0 +1,8 @@
+- name: Code Sign Installer
+  uses: skymatic/code-sign-action@v1
+  with:
+    certificate: ${{ secrets.BASE64_CERTIFICATE }}
+    password: ${{ secrets.CERTIFICATE_PASSWORD }}
+    certificatesha1: 'YOUR_CERT_THUMBPRINT'
+    folder: 'Output'
+    recursive: true
