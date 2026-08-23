@@ -13,24 +13,24 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 🚀 FIX: Creates the Output directory first, then copies and zips the files directly
     - name: Package Clean Application Installer ZIP
       run: |
-        # 1. Create a clean staging folder for your output files
+        # 1. Create clean output directory structure
         New-Item -ItemType Directory -Force -Path Output
         New-Item -ItemType Directory -Force -Path Output\MatixTheMathClub
         
-        # 2. Copy your index.html and index.js files directly into the staging folder
-        Copy-Item -Path "index.html" -Destination "Output\MatixTheMathClub\" -ErrorAction SilentlyContinue
-        Copy-Item -Path "index.js" -Destination "Output\MatixTheMathClub\" -ErrorAction SilentlyContinue
+        # 2. Copy source files over safely
+        Copy-Item -Path index.html -Destination Output\MatixTheMathClub\ -ErrorAction SilentlyContinue
+        Copy-Item -Path index.js -Destination Output\MatixTheMathClub\ -ErrorAction SilentlyContinue
         
-        # 3. Securely zip the application directory into the final distribution layout
-        Compress-Archive -Path "Output\MatixTheMathClub" -DestinationPath "Output\Matix-The-Math-Club-Windows.zip" -Force
+        # 3. Zip up the package folder natively
+        Compress-Archive -Path Output\MatixTheMathClub -DestinationPath Output\Matix-The-Math-Club-Windows.zip -Force
       shell: powershell
 
-    # Uploads the clean distribution zip directly to your GitHub Action run panel
+    # 🚀 FIX: Switched to cross-platform safe search pattern to guarantee file pickup
     - name: Upload Clean Windows Release Zip
       uses: actions/upload-artifact@v4
       with:
         name: Matix-Math-Club-Windows-Release
-        path: Output/Matix-The-Math-Club-Windows.zip
+        path: |
+          Output/*.zip
