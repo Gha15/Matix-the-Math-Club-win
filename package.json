@@ -4,9 +4,11 @@
   "description": "Matix the Math Club App",
   "main": "index.js",
   "scripts": {
-    "build": "mkdir dist && echo 'Dummy App Content' > dist\\MyWindowsApp.exe"
+    "build": "mkdir dist && echo 'Dummy App Content' > dist\\MyWindowsApp.exe",
+    "watch": "nodemon --watch . --ext * --exec \"npm run auto-commit\"",
+    "auto-commit": "git add . && git commit -m \"fixed a thing\" && git push origin master"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
 }
