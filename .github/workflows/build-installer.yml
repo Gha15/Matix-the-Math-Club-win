@@ -1,4 +1,4 @@
-name: Build Windows Installer v1
+name: Build Windows Installer
 
 on:
   push:
