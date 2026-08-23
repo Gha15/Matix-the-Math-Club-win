@@ -18,14 +18,15 @@ jobs:
       with:
         node-version: 'lts/*'
 
-    - name: Install Project Dependencies
-      run: npm install
+    # 🚀 FIX: Force installs the explicit compilation tools inside the cloud workspace folder
+    - name: Initialize Packaging Dependencies
+      run: |
+        npm init -y
+        npm install --save-dev electron@^31.0.0 electron-builder@^24.13.3
 
-    # Compiles your source directory into an optimized, self-contained standalone executable (.exe)
     - name: Compile Windows Standalone Installer
       run: npx electron-builder build --win portable --publish never
 
-    # 📁 Pulls only the generated .exe program file and packages it inside your clean ZIP container
     - name: Archive EXE Installer into ZIP
       run: |
         New-Item -ItemType Directory -Force -Path Output
