@@ -1,8 +1,32 @@
 {
   "name": "matix-the-math-club",
   "version": "1.0.0",
+  "description": "Matix the Math Club App",
   "main": "index.js",
+  "author": "Matix Developer",
   "scripts": {
     "commit": "git add . && git commit -m \"fixed a thing\" && git push origin master"
+  },
+  "build": {
+    "appId": "com.matix.mathclub",
+    "productName": "MatixTheMathClub",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "index.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
   }
 }

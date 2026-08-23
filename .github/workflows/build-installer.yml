@@ -13,31 +13,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Package Clean Application Installer ZIP
-      run: |
-        # 1. Ensure the directories exist
-        New-Item -ItemType Directory -Force -Path .\Output
-        New-Item -ItemType Directory -Force -Path .\Output\MatixTheMathClub
-        
-        # 2. Safety Check: Create index.html if it does not exist in your repo yet
-        if (-not (Test-Path "index.html")) {
-          Set-Content -Path "index.html" -Value "<h1>Matix The Math Club</h1>"
-        }
-        if (-not (Test-Path "index.js")) {
-          Set-Content -Path "index.js" -Value "console.log('App Loaded');"
-        }
-        
-        # 3. Copy files into the folder using standard relative paths
-        Copy-Item -Path "index.html" -Destination ".\Output\MatixTheMathClub\"
-        Copy-Item -Path "index.js" -Destination ".\Output\MatixTheMathClub\"
-        
-        # 4. Zip up the package natively using exact paths
-        Compress-Archive -Path ".\Output\MatixTheMathClub" -DestinationPath ".\Output\Matix-The-Math-Club-Windows.zip" -Force
-      shell: powershell
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'lts/*'
 
-    # 🚀 FIX: Uses a direct path matching rule that works across all operating systems
-    - name: Upload Clean Windows Release Zip
+    - name: Install Project Dependencies
+      run: npm install
+
+    # 🚀 FIX: Compiles your real native standalone installer .exe file 
+    - name: Compile Windows Standalone Installer
+      run: npx electron-builder build --win portable --publish never
+
+    # 📁 FIX: Uploads the raw .exe file directly without double-zipping it
+    - name: Upload Clean Windows Installer Binary
       uses: actions/upload-artifact@v4
       with:
-        name: Matix-Math-Club-Windows-Release
-        path: Output\Matix-The-Math-Club-Windows.zip
+        name: Matix-Windows-Installer
+        path: dist/*.exe
