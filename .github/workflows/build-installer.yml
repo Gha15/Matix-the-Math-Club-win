@@ -3,8 +3,6 @@ name: Build Windows Production Release
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
   workflow_dispatch:
 
 jobs:
@@ -15,22 +13,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 🚀 FIX: Automatically uses the modern stable Node.js runner to clear warning logs
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 'lts/*' 
+        node-version: 'lts/*'
 
-    - name: Install Dependencies
+    - name: Install Project Dependencies
       run: npm install
 
-    - name: Build Application Production Files
+    - name: Compile Windows Executable
       run: npm run build
 
     - name: Archive Production Build into ZIP
       run: |
         New-Item -ItemType Directory -Force -Path Output
-        Compress-Archive -Path dist\* -DestinationPath Output\Matix-The-Math-Club-Windows.zip
+        Compress-Archive -Path dist\*.exe -DestinationPath Output\Matix-The-Math-Club-Windows.zip
       shell: powershell
 
     - name: Upload Public Release Zip

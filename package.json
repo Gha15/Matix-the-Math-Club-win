@@ -4,10 +4,26 @@
   "description": "Matix the Math Club App",
   "main": "index.js",
   "scripts": {
-    "build": "mkdir dist && echo 'Dummy App Content' > dist\\MyWindowsApp.exe",
+    "build": "electron-builder build --config.asar=true",
     "commit": "git add . && git commit -m \"fixed a thing\" && git push origin master"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "build": {
+    "appId": "com.matix.mathclub",
+    "productName": "MatixTheMathClub",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable" 
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  },
+  "dependencies": {
+    "electron": "^31.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
+  }
 }
