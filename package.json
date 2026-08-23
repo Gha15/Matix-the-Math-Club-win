@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Matix the Math Club App",
   "main": "index.js",
+  "author": "Matix Developer",
   "scripts": {
     "build": "electron-builder build --config.asar=true",
     "commit": "git add . && git commit -m \"fixed a thing\" && git push origin master"
@@ -20,10 +21,9 @@
       "target": "dmg"
     }
   },
-  "dependencies": {
-    "electron": "^31.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "electron": "^31.0.0",
     "electron-builder": "^24.13.3"
   }
 }
