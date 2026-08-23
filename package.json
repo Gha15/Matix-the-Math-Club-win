@@ -1,0 +1,21 @@
+{
+  "name": "matix-the-math-club-windows",
+  "version": "1.0.0",
+  "description": "This is an EXACT 1:1 copy of the club web app. The real `app.html` ships with the program and runs inside a native C# WPF window through WebView2, so every page, feature and pixel matches the original: login, workspace, AI, learn, games hub, chat, ideas, points, notifications, roles, video calls, all of it.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gha15/Matix-the-Math-Club-win.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Gha15/Matix-the-Math-Club-win/issues"
+  },
+  "homepage": "https://github.com/Gha15/Matix-the-Math-Club-win#readme"
+}
