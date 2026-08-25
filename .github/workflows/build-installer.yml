@@ -21,9 +21,10 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Build the WPF app
-        # Tells GitHub to execute the dotnet build inside your specific subfolder
+        # Points directly to the folder visible in your explorer
         working-directory: ./MatixTheMathClub
-        run: dotnet publish MatixMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish
+        # Fixed filename: MatixTheMathClub.csproj
+        run: dotnet publish MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish
 
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
@@ -40,11 +41,12 @@ jobs:
             throw 'Could not locate ISCC.exe on this runner.' 
           }
           Write-Host "Using ISCC path: $iscc"
-          & $iscc 'installer\Matix.iss'
+          # Compiles your installer config script
+          & $iscc 'installer-config.iss'
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compiler compilation failed.' }
 
       - uses: actions/upload-artifact@v4
         with:
           name: matix-win
-          path: dist/matix-installer.exe
+          path: Output/*.exe
           if-no-files-found: error
