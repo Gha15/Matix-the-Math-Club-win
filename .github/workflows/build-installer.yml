@@ -23,8 +23,19 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Build the WPF app
-        # Points directly to your confirmed path and forces the output into a clean 'publish' folder at the root workspace
         run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish
+
+      # NEW STEP: Flatten the win-x64 folder structure out to the main publish directory
+      - name: Flatten Publish Directory
+        shell: pwsh
+        run: |
+          if (Test-Path "publish/win-x64") {
+            Write-Host "Moving files out of win-x64 subfolder..."
+            Move-Item -Path "publish/win-x64/*" -Destination "publish/" -Force
+            Remove-Item -Path "publish/win-x64" -Recurse -Force
+          } else {
+            Write-Host "No win-x64 subfolder found, skipping directory flattening."
+          }
 
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
