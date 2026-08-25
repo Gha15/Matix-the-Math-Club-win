@@ -5,7 +5,7 @@
   "main": "index.js",
   "author": "Matix Developer",
   "scripts": {
-    "commit": "git add . && git commit -m \"fixed a thing\" && git push origin master"
+    "commit": "node git-commit-helper.js"
   },
   "build": {
     "appId": "com.matix.mathclub",
