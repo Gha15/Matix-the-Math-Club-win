@@ -1,33 +1,48 @@
-name: Build Windows Production Release
+name: Build Windows Installer
 
 on:
-  push:
-    branches: [ "master" ]
   workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  windows:
+    name: Windows installer
     runs-on: windows-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 'lts/*'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Install Project Dependencies
-      run: npm install
+      - name: Build the WPF app
+        run: dotnet publish MatixMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish
 
-    # 🚀 FIX: Compiles your real native standalone installer .exe file 
-    - name: Compile Windows Standalone Installer
-      run: npx electron-builder build --win portable --publish never
+      - name: Build the installer via Pre-installed Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { 
+            $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" 
+          }
+          if (-not (Test-Path $iscc)) {
+            $cmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+            if ($cmd) { $iscc = $cmd.Source }
+          }
+          if (-not (Test-Path $iscc)) { 
+            throw 'Could not locate ISCC.exe on this runner.' 
+          }
+          Write-Host "Using ISCC path: $iscc"
+          & $iscc 'installer\Matix.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compiler compilation failed.' }
 
-    # 📁 FIX: Uploads the raw .exe file directly without double-zipping it
-    - name: Upload Clean Windows Installer Binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: Matix-Windows-Installer
-        path: dist/*.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: matix-win
+          path: dist/matix-installer.exe
+          if-no-files-found: error
