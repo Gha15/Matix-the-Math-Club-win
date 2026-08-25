@@ -16,7 +16,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "publish\MatixTheMathClub.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-
 [Icons]
 Name: "{group}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub.exe"
 Name: "{autodesktop}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub.exe"; Tasks: desktopicon

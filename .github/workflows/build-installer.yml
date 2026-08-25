@@ -3,7 +3,6 @@ name: Build Windows Installer
 on:
   workflow_dispatch:
   push:
-    # Trigger on standard code pushes to master AND version tags
     branches:
       - "master"
     tags:
@@ -24,9 +23,8 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Build the WPF app
-        working-directory: ./MatixTheMathClub
-        # Uses your absolute workspace mapping to isolate the compilation binaries safely
-        run: dotnet publish MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o "${{ github.workspace }}/publish"
+        # Removed working-directory and provided explicit relative pathing
+        run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish
 
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
