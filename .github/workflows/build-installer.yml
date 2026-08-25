@@ -22,8 +22,23 @@ jobs:
 
       - name: Build the WPF app
         working-directory: ./MatixTheMathClub
-        # Added "../" to output directly into a "publish" folder in the repo root
         run: dotnet publish MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ../publish
+
+      # NEW DIAGNOSTIC STEP: Find exactly where the file is
+      - name: Locate Compiled Files
+        shell: pwsh
+        run: |
+          Write-Host "=== Current Root Directory Contents ==="
+          Get-ChildItem -Recurse -Depth 2 | Select-Object FullName
+          
+          Write-Host "`n=== Searching for MatixTheMathClub.exe ==="
+          $match = Get-ChildItem -Filter MatixTheMathClub.exe -Recurse -ErrorAction SilentlyContinue
+          if ($match) {
+            Write-Host "FOUND IT! The exact path is:"
+            $match | ForEach-Object { Write-Host $_.FullName }
+          } else {
+            Write-Host "CRITICAL: MatixTheMathClub.exe was not found ANYWHERE on the runner disk."
+          }
 
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
