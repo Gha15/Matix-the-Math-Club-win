@@ -9,8 +9,9 @@ Compression=lzma
 SolidCompression=yes
 
 [Files]
-; Update the Source path to match your Node compilation output (e.g., dist\MyWindowsApp.exe)
-Source: "dist\MyWindowsApp.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "MatixTheMathClub\publish\MatixTheMathClub.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "MatixTheMathClub\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
 
 [Icons]
 Name: "{group}\MyWindowsApp"; Filename: "{app}\MyWindowsApp.exe"
