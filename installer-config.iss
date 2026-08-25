@@ -14,8 +14,9 @@ Source: "MatixTheMathClub\publish\*"; DestDir: "{app}"; Flags: ignoreversion rec
 
 
 [Icons]
-Name: "{group}\MyWindowsApp"; Filename: "{app}\MyWindowsApp.exe"
-Name: "{autodesktop}\MyWindowsApp"; Filename: "{app}\MyWindowsApp.exe"; Tasks: desktopicon
+Name: "{group}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub.exe"
+Name: "{autodesktop}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub.exe"; Tasks: desktopicon
 
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+[Run]
+Filename: "{app}\MatixTheMathClub.exe"; Description: "{cm:LaunchProgram,Matix The Math Club}"; Flags: nowait postinstall skipifsilent
+
