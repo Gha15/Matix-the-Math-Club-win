@@ -23,8 +23,9 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Build the WPF app
-        # Added -p:PublishTrimmed=true to erase unused framework methods automatically
-        run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=true -p:AssemblyName="MatixTheMathClub-Win" -p:PublishDir="${{ github.workspace }}/publish/"
+        # Removed -p:PublishTrimmed=true to fix the crash
+        # Added -p:PublishReadyToRun=true and -p:ReadyToRunEmitSymbols=false to optimize assembly sizes safely
+        run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishReadyToRun=true -p:ReadyToRunEmitSymbols=false -p:AssemblyName="MatixTheMathClub-Win" -p:PublishDir="${{ github.workspace }}/publish/"
 
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
