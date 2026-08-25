@@ -13,8 +13,9 @@ OutputBaseFilename=MatixMathClubSetup
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "MatixTheMathClub\publish\MatixTheMathClub.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "MatixTheMathClub\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "publish\MatixTheMathClub.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
 
 [Icons]
 Name: "{group}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub.exe"
