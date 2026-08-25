@@ -6,7 +6,7 @@ page, feature and pixel matches the original: login, workspace, AI, learn,
 games hub, chat, ideas, points, notifications, roles, video calls, all of it.
 
 ## Open it
-you can download [here](https://file.kiwi/d6c891c0#5jPKrsbL9R35Sz4vw-bEeg) if you wanna skip steps
+you can download [here](https://toffeeshare.com/c/M39-kYGdSI) if you wanna skip steps
 1. Install the .NET 8 SDK (included with Visual Studio 2022 17.8+).
 2. Open `Matix the Math Club.sln`, press F5. NuGet restores the WebView2
    package automatically on first build (needs internet once).
