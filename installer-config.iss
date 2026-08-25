@@ -13,12 +13,12 @@ OutputBaseFilename=MatixMathClubSetup
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "publish\MatixTheMathClub.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "publish\MatixTheMathClub-Win.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub.exe"
-Name: "{autodesktop}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub.exe"; Tasks: desktopicon
+Name: "{group}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub-Win.exe"
+Name: "{autodesktop}\Matix The Math Club"; Filename: "{app}\MatixTheMathClub-Win.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\MatixTheMathClub.exe"; Description: "{cm:LaunchProgram,Matix The Math Club}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MatixTheMathClub-Win.exe"; Description: "{cm:LaunchProgram,Matix The Math Club}"; Flags: nowait postinstall skipifsilent

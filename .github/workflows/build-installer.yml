@@ -23,9 +23,8 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Build the WPF app
-        # Changed "-o publish" to the direct MSBuild property "-p:PublishDir"
-        # This completely strips out automated "win-x64" folder nesting rules
-        run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishDir="${{ github.workspace }}/publish/"
+        # Added -p:AssemblyName="MatixTheMathClub-Win" to force the lowercase/nospace naming convention
+        run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:AssemblyName="MatixTheMathClub-Win" -p:PublishDir="${{ github.workspace }}/publish/"
 
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
