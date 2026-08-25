@@ -22,15 +22,20 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      # Check the repository layout and run build commands inside the folder tree
       - name: Build the WPF app
+        # Removed -p:PublishSingleFile=false to let your project's default build properties apply naturally
+        run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -o publish
+
+      # DIAGNOSTIC: Look inside the fresh publish folder to see what it actually created
+      - name: List Output Files
         shell: pwsh
         run: |
-          Write-Host "Checking current repository layout..."
-          Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object { Write-Host "Found project file at: $($_.FullName)" }
-          
-          # This runs the build from the top-level repository folder and outputs cleanly
-          dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish
+          if (Test-Path "publish") {
+            Write-Host "=== Contents of your temporary publish folder ==="
+            Get-ChildItem -Path "publish" | Select-Object Name
+          } else {
+            Write-Host "CRITICAL: The publish directory was never created by the .NET compiler!"
+          }
 
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
