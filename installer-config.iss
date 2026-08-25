@@ -3,11 +3,16 @@ AppName=Matix The Math Club
 AppVersion=1.0.0
 DefaultDirName={autopf}\MatixTheMathClub
 DefaultGroupName=Matix The Math Club
-UninstallDisplayIcon={app}\MatixTheMathClub.exe
-Compression=lzma2
-SolidCompression=yes
+UninstallDisplayIcon={app}\MatixTheMathClub-Win.exe
 OutputDir=Output
 OutputBaseFilename=MatixMathClubSetup
+
+; --- EXTREME COMPRESSION PRESETS ---
+Compression=lzma2/ultra64
+SolidCompression=yes
+LZMAUseSeparateProcess=yes
+LZMANumFastBytes=273
+; ------------------------------------
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
