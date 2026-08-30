@@ -1487,8 +1487,163 @@ body.dark .u5-top{background:#1c2230}
 .nav-sep{height:1px;margin:10px 10px 2px;background:var(--border);opacity:.75}
 body.dark .nav-sep{background:rgba(255,255,255,.10)}
 </style>
+<!-- ================= MATIX LABS v6 : boot loader + gate styling ================= -->
+<style id="mxL6Css">
+/* =====================================================================
+   MATIX LABS v6
+   1. Boot / loading screen shown FIRST (labs.google flow)
+   2. Welcome screen (owner-editable content)
+   3. Sign-in AFTER the loading + welcome
+   ===================================================================== */
+
+/* ---- while booting, nothing else may paint (kills the flash) ---- */
+.mx-booting #gate,.mx-booting #app,.mx-booting #titlebar{visibility:hidden !important}
+.mx-booting{overflow:hidden}
+
+/* ---------- 1. BOOT / LOADING SCREEN ---------- */
+#mxBoot{
+  position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;
+  padding:32px 24px;text-align:center;
+  background:
+    radial-gradient(760px 480px at 0% 0%,rgba(255,79,163,.20),transparent 62%),
+    radial-gradient(760px 480px at 100% 0%,rgba(139,92,246,.20),transparent 62%),
+    radial-gradient(760px 480px at 0% 100%,rgba(56,189,248,.18),transparent 62%),
+    radial-gradient(760px 480px at 100% 100%,rgba(251,146,60,.18),transparent 62%),
+    #fff;
+  opacity:1;transition:opacity .5s ease}
+#mxBoot.mx-out{opacity:0;pointer-events:none}
+body.desktop #mxBoot{top:40px}
+body.dark #mxBoot{
+  background:
+    radial-gradient(760px 480px at 0% 0%,rgba(255,79,163,.16),transparent 62%),
+    radial-gradient(760px 480px at 100% 0%,rgba(139,92,246,.18),transparent 62%),
+    radial-gradient(760px 480px at 0% 100%,rgba(56,189,248,.14),transparent 62%),
+    radial-gradient(760px 480px at 100% 100%,rgba(251,146,60,.14),transparent 62%),
+    #12121a}
+#mxBoot .mxb-in{position:relative;z-index:2;max-width:520px;width:100%}
+#mxBootWord{
+  font-size:clamp(2.6rem,11vw,4.6rem);font-weight:900;letter-spacing:-.045em;line-height:1;
+  background:linear-gradient(90deg,var(--mx-pink,#ff4fa3),var(--mx-purple,#8b5cf6) 45%,var(--mx-blue,#38bdf8));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size:220% 100%;animation:mxbShine 2.6s ease-in-out infinite}
+#mxBootWord .mxlogo .lb{background:linear-gradient(180deg,var(--mx-purple,#8b5cf6),var(--mx-pink,#ff4fa3))}
+#mxBootWord .mxlogo .ls{background:linear-gradient(160deg,var(--mx-purple,#8b5cf6),var(--mx-blue,#38bdf8))}
+#mxBootWord .mxlogo .lx{color:var(--mx-pink,#ff4fa3)}
+@keyframes mxbShine{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+#mxBootTag{margin-top:16px;color:var(--muted,#7d7a75);font-size:.96rem;font-weight:600;min-height:22px}
+#mxBootTrack{margin:26px auto 0;width:min(260px,72vw);height:4px;border-radius:999px;overflow:hidden;
+  background:rgba(139,92,246,.16)}
+#mxBootBar{width:0%;height:100%;border-radius:999px;transition:width .28s ease;
+  background:linear-gradient(90deg,var(--mx-pink,#ff4fa3),var(--mx-purple,#8b5cf6),var(--mx-blue,#38bdf8))}
+#mxBootDots{margin-top:14px;font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mx-purple,#8b5cf6);opacity:.75}
+@media(prefers-reduced-motion:reduce){#mxBootWord{animation:none}}
+body.reduce-motion #mxBootWord{animation:none}
+
+/* ---------- 2. GATE SHELL (was unstyled - this is the missing CSS) ---------- */
+#gate{position:fixed;inset:0;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  display:block;align-items:stretch;justify-content:flex-start;padding:0}
+#gate .lb-glows{position:fixed;inset:0;pointer-events:none;z-index:0}
+
+/* ---- welcome screen ---- */
+.gate-welcome{position:relative;z-index:1;min-height:100%;display:flex;align-items:center;justify-content:center;
+  padding:56px 24px 96px;text-align:center}
+.gate-welcome-inner{max-width:820px;width:100%}
+.gate-welcome-h{font-size:clamp(1.6rem,4.4vw,2.6rem);font-weight:900;letter-spacing:-.03em;margin:18px 0 14px;line-height:1.1}
+.gate-welcome-lead{font-size:clamp(1rem,2vw,1.14rem);color:var(--muted,#7d7a75);line-height:1.68;max-width:620px;margin:0 auto 32px}
+.gate-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:16px;
+  margin:0 auto 36px;max-width:740px;text-align:left}
+.gate-goal{border:1px solid var(--border,#e6e5e3);border-radius:20px;padding:20px 22px;background:var(--card,#fff);
+  transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s,border-color .22s}
+.gate-goal:hover{transform:translateY(-5px);box-shadow:0 18px 44px rgba(0,0,0,.10);border-color:rgba(139,92,246,.38)}
+.gate-goal .gi{font-size:1.65rem;margin-bottom:10px;line-height:1}
+.gate-goal b{display:block;font-size:.96rem;margin-bottom:5px;font-weight:800;letter-spacing:-.01em}
+.gate-goal span{font-size:.86rem;color:var(--muted,#7d7a75);line-height:1.55}
+.gate-continue{border:none;border-radius:999px;padding:16px 36px;font-size:1.05rem;font-weight:800;color:#fff;
+  font-family:inherit;letter-spacing:-.01em;cursor:pointer;
+  background:linear-gradient(90deg,var(--mx-purple,#8b5cf6),var(--mx-blue,#38bdf8));
+  box-shadow:0 12px 36px rgba(139,92,246,.38);transition:transform .16s,filter .16s,box-shadow .16s}
+.gate-continue:hover{filter:brightness(1.07);transform:translateY(-2px);box-shadow:0 16px 44px rgba(139,92,246,.46)}
+.gate-continue:active{transform:translateY(0)}
+.gate-free-badge{display:inline-block;margin-top:18px;font-size:.79rem;font-weight:800;letter-spacing:.02em;
+  color:var(--mx-purple,#8b5cf6);background:rgba(139,92,246,.12);border-radius:999px;padding:7px 15px}
+.gate-edit{display:block;margin:26px auto 0;font-size:.83rem;font-weight:700;color:var(--muted,#7d7a75);
+  background:none;border:1px dashed var(--border,#e6e5e3);border-radius:999px;padding:8px 16px;cursor:pointer;font-family:inherit}
+.gate-edit:hover{color:var(--mx-purple,#8b5cf6);border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.06)}
+
+/* ---- sign-in card (shown only AFTER welcome) ---- */
+.gate-auth{position:relative;z-index:1;min-height:100%;display:flex;align-items:center;justify-content:center;padding:52px 20px 84px}
+.gate-auth .gate-card{max-width:430px;width:100%;text-align:center;padding:38px 34px 30px;border-radius:26px;
+  background:var(--card,#fff);border:1px solid rgba(139,92,246,.18);box-shadow:0 30px 90px rgba(139,92,246,.20);
+  animation:mxUp .34s cubic-bezier(.2,.7,.2,1) both}
+.gate-auth .gate-logo{width:64px;height:64px;margin:0 auto 16px}
+#gateAuth .gate-card h1{font-size:1.5rem;font-weight:900;margin-bottom:6px;letter-spacing:-.02em;
+  background:linear-gradient(90deg,var(--mx-pink,#ff4fa3),var(--mx-purple,#8b5cf6) 45%,var(--mx-blue,#38bdf8));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+#gTitle .mxlogo{-webkit-text-fill-color:initial;color:var(--text)}
+#gateAuth .gate-card p{color:var(--muted,#7d7a75);font-size:.92rem;margin-bottom:22px}
+#gateAuth .fld{text-align:left;margin-bottom:14px}
+#gateAuth input{border-radius:12px;padding:12px 14px;font-size:.98rem}
+#gateAuth .btn.block{border-radius:14px;padding:13px;font-size:1rem;margin-top:6px}
+.gate-keep{display:flex;align-items:center;gap:8px;justify-content:flex-start;font-size:.86rem;
+  color:var(--muted,#7d7a75);margin:4px 0 14px;cursor:pointer}
+.gate-keep input{width:auto}
+.gate-back{margin-top:16px;font-size:.86rem;color:var(--muted,#7d7a75);cursor:pointer;background:none;border:none;
+  font-family:inherit;padding:6px 12px;border-radius:999px}
+.gate-back:hover{color:var(--text);background:var(--hover,#efedeb)}
+
+/* ---- staggered reveal (class was used but never defined) ---- */
+@keyframes mxUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.lb-stagger>*{animation:mxUp .62s cubic-bezier(.2,.7,.2,1) both}
+.lb-stagger>*:nth-child(1){animation-delay:.05s}
+.lb-stagger>*:nth-child(2){animation-delay:.12s}
+.lb-stagger>*:nth-child(3){animation-delay:.19s}
+.lb-stagger>*:nth-child(4){animation-delay:.26s}
+.lb-stagger>*:nth-child(5){animation-delay:.33s}
+.lb-stagger>*:nth-child(6){animation-delay:.40s}
+.lb-stagger>*:nth-child(7){animation-delay:.47s}
+body.reduce-motion .lb-stagger>*{animation:none}
+
+/* ---- dark mode ---- */
+body.dark .gate-goal{background:#1e2029;border-color:#33334a}
+body.dark .gate-auth .gate-card{background:#191926;border-color:#33334a}
+body.dark #gate{background:#12121a}
+body.dark #mxBootTrack{background:rgba(139,92,246,.24)}
+
+/* ---- responsive ---- */
+@media(max-width:640px){
+  .gate-welcome{padding:36px 16px 76px}
+  .gate-goals{grid-template-columns:1fr;gap:12px}
+  .gate-auth .gate-card{padding:30px 22px 24px;border-radius:22px}
+}
+
+/* ---------- 3. labs.google polish pass ---------- */
+.gate-continue:focus-visible,.gate-back:focus-visible,.gate-edit:focus-visible,
+#gateAuth input:focus-visible,.btn:focus-visible{outline:2px solid var(--mx-purple,#8b5cf6);outline-offset:3px}
+.mx-reveal{opacity:0;transform:translateY(18px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1)}
+.mx-reveal.mx-in{opacity:1;transform:none}
+body.reduce-motion .mx-reveal{opacity:1;transform:none;transition:none}
+
+/* owner content editor modal rows */
+.mxsc-card{border:1px solid var(--border,#e6e5e3);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--soft,#f9f8f7)}
+.mxsc-card .mxsc-hd{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:.86rem;margin-bottom:8px}
+.mxsc-card .mxsc-hd button{background:none;border:none;color:var(--red,#e56458);font-weight:800;cursor:pointer;font-family:inherit;font-size:.82rem}
+.mxsc-row{display:grid;grid-template-columns:74px 1fr;gap:8px}
+body.dark .mxsc-card{background:#1e2029;border-color:#33334a}
+</style>
+<script>try{document.documentElement.classList.add('mx-booting');}catch(e){}</script>
 </head>
 <body>
+<!-- ========== MATIX LABS v6 : loading screen (paints before anything else) ========== -->
+<div id="mxBoot">
+  <div class="lb-glows"><div class="lb-glow g1"></div><div class="lb-glow g2"></div><div class="lb-glow g3"></div><div class="lb-glow g4"></div></div>
+  <div class="mxb-in">
+    <div id="mxBootWord">MATIX</div>
+    <div id="mxBootTag">Loading your math workspace&#8230;</div>
+    <div id="mxBootTrack"><div id="mxBootBar"></div></div>
+    <div id="mxBootDots">Starting up</div>
+  </div>
+</div>
+
 
 <!-- ========== Welcome + sign-in gate (labs.google style) ========== -->
 <div id="gate">
@@ -1499,8 +1654,8 @@ body.dark .nav-sep{background:rgba(255,255,255,.10)}
       <div><span class="lb-eyebrow"><span class="dot"></span>Free math education platform</span></div>
       <div class="lb-word">MATIX</div>
       <h1 class="gate-welcome-h">Welcome to Matix</h1>
-      <p class="gate-welcome-lead">Matix is a free, educative math platform for the Math Club. Learn at your own pace, play member-made games, chat with AI tutors, and grow your skills — no paywall, ever.</p>
-      <div class="gate-goals">
+      <p class="gate-welcome-lead no-mxlogo">Matix is a free, educative math platform for the Math Club. Learn at your own pace, play member-made games, chat with AI tutors, and grow your skills — no paywall, ever.</p>
+      <div class="gate-goals no-mxlogo">
         <div class="gate-goal"><div class="gi">🦉</div><b>Learn anything</b><span>AI lessons explain math from zero, with quizzes that check your understanding.</span></div>
         <div class="gate-goal"><div class="gi">🎮</div><b>Play &amp; create</b><span>Try club games or publish your own — a creative way to practice math.</span></div>
         <div class="gate-goal"><div class="gi">✨</div><b>Club community</b><span>Share ideas, earn points, chat with friends, and shape what Matix builds next.</span></div>
@@ -1895,8 +2050,7 @@ function doSignIn(rawU,pass){
     if(!ok)return false;
     return fbGet('/bans/'+encodeURIComponent(u)).then(function(b){
       if(b){toast('This account has been suspended by the owner.','err');return false;}
-      setUser(u);
-      return ensureSession(u).then(function(){return true;});
+      setUser(u);return true;
     });
   });
 }
@@ -1907,10 +2061,9 @@ function doJoin(rawU,pass){
   if(VALID_MEMBERS[u])return Promise.resolve('reserved');
   return fbGet('/members/'+encodeURIComponent(u)).then(function(ex){
     if(ex)return 'taken';
-    return fbPut('/members/'+encodeURIComponent(u),{password:pass,joinedAt:Date.now(),testUser:true,sessionRev:Date.now()}).then(function(){
+    return fbPut('/members/'+encodeURIComponent(u),{password:pass,joinedAt:Date.now(),testUser:true}).then(function(){
       fbPut('/profiles/'+encodeURIComponent(u),{displayName:u,bio:'',updatedAt:Date.now()});
-      setUser(u);
-      return ensureSession(u).then(function(){return 'ok';});
+      setUser(u);return 'ok';
     });
   });
 }
@@ -1926,28 +2079,14 @@ function verifyPassword(u,pass){
    SIGN IN SCREEN
    ===================================================================== */
 var authMode='signin';
-function showGateAuth(){
-  refreshGate();
-  var w=$('gateWelcome'),a=$('gateAuth');
-  if(w)w.style.display='none';
-  if(a){a.style.display='flex';setLogos();setTimeout(function(){var u=$('gUser');if(u)u.focus();},80);}
-}
-function showGateWelcome(){
-  var w=$('gateWelcome'),a=$('gateAuth');
-  if(a)a.style.display='none';
-  if(w)w.style.display='flex';
-}
 function refreshGate(){
   var join=authMode==='join';
-  var logo=typeof mxLogoHTML==='function'?mxLogoHTML():'Matix';
-  $('gTitle').innerHTML=join?'Create your '+logo+' account':'Sign in to '+logo;
-  $('gSub').textContent=join?'Join the community — free forever':'Your free math club workspace';
+  $('gTitle').textContent=join?'Create your Matix account':'Sign in to Matix';
+  $('gSub').textContent=join?'Join the community':'Your math club workspace';
   $('gBtn').textContent=join?'Create account':'Sign in';
   $('gSwap').innerHTML=join?'Already a member? <a id="gSwapA">Sign in</a>':'New to Matix? <a id="gSwapA">Create an account</a>';
   $('gSwapA').onclick=function(){authMode=join?'signin':'join';refreshGate();$('gErr').textContent='';};
 }
-if($('gContinue'))$('gContinue').onclick=showGateAuth;
-if($('gBackWelcome'))$('gBackWelcome').onclick=showGateWelcome;
 $('gBtn').onclick=async function(){
   var b=$('gBtn'),e=$('gErr');e.textContent='';b.disabled=true;
   var u=$('gUser').value,p=$('gPass').value;
@@ -1961,6 +2100,7 @@ $('gBtn').onclick=async function(){
   }
 };
 $('gPass').addEventListener('keydown',function(e){if(e.key==='Enter')$('gBtn').click();});
+refreshGate();
 
 function enterApp(){
   ME=normUser(getUser());
@@ -1992,8 +2132,7 @@ function loadAvatar(){
     av.textContent=e||initials(ME);
   });
 }
-$('signOut').onclick=doSignOut;
-if($('signOutAll'))$('signOutAll').onclick=doSignOutAll;
+$('signOut').onclick=function(){clearUser();lsDel(KEEP_KEY);location.reload();};
 if($('profileBtn'))$('profileBtn').onclick=function(){if(!window.ME){toast('Sign in first to edit your profile','err');return;}openProfileModal();};
 
 /* =====================================================================
@@ -7523,8 +7662,7 @@ function initBar(){
   if($('tbThemeBtn'))$('tbThemeBtn').onclick=function(){if(!window.ME){toast('Sign in first to change the colour theme','err');return;}openTab({kind:'theme'});barPanel(false);};
   if($('tbMotionBtn'))$('tbMotionBtn').onclick=function(){var on=!getMotion();lsSet(MOTION_KEY,on?'1':'0');applyMotion(on);};
   if($('tbQuietBtn'))$('tbQuietBtn').onclick=function(){var on=!getQuiet();lsSet(QUIET_KEY,on?'1':'0');applyQuiet(on);if(!on)toast('Pop-ups are back on');};
-  if($('tbSignOut'))$('tbSignOut').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}doSignOut();};
-  if($('tbSignOutAll'))$('tbSignOutAll').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}doSignOutAll();};
+  if($('tbSignOut'))$('tbSignOut').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();};
   applyMotion(getMotion());
   if($('tbSettings'))$('tbSettings').onclick=function(e){e.stopPropagation();barPanel();};
   if($('tbReload'))$('tbReload').onclick=reloadActiveTab;
@@ -7556,7 +7694,7 @@ function initSidebar(){
   item('wsmTheme',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'theme'});});
   item('wsmDisc',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'discussions'});});
   item('wsmTranslate',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'translate'});});
-  item('wsmSignOut',function(){if(!window.ME){toast('You are not signed in','err');return;}doSignOut();});
+  item('wsmSignOut',function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();});
   if($('sbqHome'))$('sbqHome').onclick=function(){if(window.ME)openTab({kind:'home'});};
   if($('sbqAi'))$('sbqAi').onclick=function(){if(window.ME)openTab({kind:'ai'});};
   if($('sbqDisc'))$('sbqDisc').onclick=function(){if(window.ME)openTab({kind:'discussions'});};
@@ -7613,14 +7751,7 @@ initDesktop();
 initBar();
 initSidebar();
 initLang();
-(function bootAuth(){
-  var u=getUser();
-  if(!u)return;
-  checkSessionValid(u).then(function(ok){
-    if(ok)enterApp();
-    else{clearUser();lsDel(KEEP_KEY);clearLocalSessionRev(u);toast('Your session ended on another device. Please sign in again.','err');}
-  });
-})();
+if(getUser()){enterApp();}
 
 /* =====================================================================
    MATIX UI v5  —  menu filter, recent pages, folding groups,
@@ -8157,37 +8288,15 @@ body.dark .lx-mist{background:rgba(229,100,88,.12);border-color:rgba(229,100,88,
    ===================================================================== */
 
 /* ---- sign-in gate, labs style ---- */
-#gate{position:fixed;inset:0;z-index:200;overflow-y:auto;background:var(--bg);display:block;align-items:stretch;justify-content:flex-start;padding:0}
-#gate .lb-glows{position:fixed;inset:0;pointer-events:none}
-.gate-welcome{position:relative;min-height:100%;display:flex;align-items:center;justify-content:center;padding:48px 24px 90px;text-align:center;z-index:1}
-.gate-welcome-inner{max-width:760px;width:100%}
-.gate-welcome-h{font-size:clamp(1.35rem,3vw,2rem);font-weight:900;margin:16px 0 12px;letter-spacing:-.02em}
-.gate-welcome-lead{font-size:clamp(.98rem,2vw,1.12rem);color:var(--muted);line-height:1.65;max-width:580px;margin:0 auto 28px}
-.gate-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:0 auto 34px;max-width:680px;text-align:left}
-.gate-goal{border:1px solid var(--border);border-radius:18px;padding:18px 20px;background:var(--card);transition:transform .2s,box-shadow .2s,border-color .2s}
-.gate-goal:hover{transform:translateY(-4px);box-shadow:0 14px 36px rgba(0,0,0,.09);border-color:rgba(139,92,246,.35)}
-.gate-goal .gi{font-size:1.55rem;margin-bottom:8px}
-.gate-goal b{display:block;font-size:.94rem;margin-bottom:4px;font-weight:800}
-.gate-goal span{font-size:.84rem;color:var(--muted);line-height:1.5}
-.gate-continue{border:none;border-radius:999px;padding:15px 34px;font-size:1.04rem;font-weight:800;color:#fff;background:linear-gradient(90deg,var(--mx-purple,#8b5cf6),var(--mx-blue,#38bdf8));box-shadow:0 10px 34px rgba(139,92,246,.38);cursor:pointer;transition:transform .15s,filter .15s;font-family:inherit}
-.gate-continue:hover{filter:brightness(1.07);transform:translateY(-2px)}
-.gate-free-badge{display:inline-block;margin-top:16px;font-size:.78rem;font-weight:800;color:var(--mx-purple,#8b5cf6);background:rgba(139,92,246,.12);border-radius:999px;padding:6px 14px;letter-spacing:.02em}
-.gate-auth{position:relative;min-height:100%;display:flex;align-items:center;justify-content:center;padding:48px 20px 80px;z-index:1}
-.gate-auth .gate-card{max-width:430px;width:100%;text-align:center;padding:38px 34px 30px;border-radius:26px;box-shadow:0 30px 90px rgba(139,92,246,.20);border:1px solid rgba(139,92,246,.18);background:#fff;animation:pop .28s ease}
-.gate-auth .gate-logo{width:64px;height:64px;margin:0 auto 16px}
-.gate-back{margin-top:16px;font-size:.86rem;color:var(--muted);cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 8px;border-radius:8px}
-.gate-back:hover{color:var(--text);background:var(--hover)}
-#gateAuth .fld{text-align:left;margin-bottom:14px}
-#gateAuth .gate-card h1{font-size:1.5rem;margin-bottom:6px;font-weight:900;background:linear-gradient(90deg,var(--mx-pink),var(--mx-purple) 45%,var(--mx-blue));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
-#gTitle .mxlogo{-webkit-text-fill-color:initial;color:var(--text)}
-#gateAuth .gate-card p{color:var(--muted);font-size:.92rem;margin-bottom:22px}
-#gateAuth input{border-radius:12px;padding:12px 14px;font-size:.98rem}
-#gateAuth .btn.block{border-radius:14px;padding:13px;font-size:1rem;margin-top:6px}
-.gate-keep{display:flex;align-items:center;gap:8px;justify-content:flex-start;font-size:.86rem;color:var(--muted);margin:4px 0 14px;cursor:pointer}
-body.dark .gate-goal{background:#1e2029;border-color:#33334a}
-body.dark .gate-auth .gate-card{background:#191926;border-color:#33334a}
-body.dark #gate{background:#12121a}
-@media(max-width:640px){.gate-welcome{padding:32px 16px 70px}.gate-goals{grid-template-columns:1fr}}
+#gate{background:
+  radial-gradient(640px 420px at 0% 0%,rgba(255,79,163,.20),transparent 62%),
+  radial-gradient(640px 420px at 100% 0%,rgba(139,92,246,.20),transparent 62%),
+  radial-gradient(640px 420px at 0% 100%,rgba(56,189,248,.18),transparent 62%),
+  radial-gradient(640px 420px at 100% 100%,rgba(251,146,60,.18),transparent 62%),
+  var(--bg)}
+.gate-card{border-radius:26px;box-shadow:0 30px 90px rgba(139,92,246,.20);border:1px solid rgba(139,92,246,.18)}
+.gate-card h1{background:linear-gradient(90deg,var(--mx-pink),var(--mx-purple) 45%,var(--mx-blue));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
+body.dark .gate-card{background:#191926;border-color:#33334a}
 
 /* ---- page hero banner ---- */
 .lb-ph{display:flex;gap:16px;align-items:center;margin:6px 0 22px;padding:22px 24px;border-radius:20px;color:#fff;position:relative;overflow:hidden;animation:lbUp .5s cubic-bezier(.2,.7,.2,1) both;text-align:left}
@@ -10470,7 +10579,7 @@ function mxLogoizeText(node){
     var p=node.parentNode;if(!p)return;
     var pt=p.tagName||'';
     if(/^(SCRIPT|STYLE|TEXTAREA|OPTION|SELECT|TITLE)$/i.test(pt))return;
-    if(p.closest&&(p.closest('.mxlogo')||p.closest('[contenteditable="true"]')))return;
+    if(p.closest&&(p.closest('.mxlogo')||p.closest('.no-mxlogo')||p.closest('[contenteditable="true"]')))return;
     var tmp=document.createElement('span');
     tmp.innerHTML=esc(s).replace(MXLOGO_RE_G,mxLogoHTML());
     var frag=document.createDocumentFragment();
@@ -10486,7 +10595,7 @@ function mxLogoizeNode(root){
     if(root.nodeType!==1)return;
     var tag=root.tagName||'';
     if(/^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION|IFRAME|CANVAS|SVG)$/i.test(tag))return;
-    if(root.closest&&(root.closest('.mxlogo')||root.closest('[contenteditable="true"]')))return;
+    if(root.closest&&(root.closest('.mxlogo')||root.closest('.no-mxlogo')||root.closest('[contenteditable="true"]')))return;
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false),n,list=[];
     while((n=w.nextNode())){if(MXLOGO_RE_T.test(n.nodeValue||''))list.push(n);}
     for(var i=0;i<list.length;i++)mxLogoizeText(list[i]);
@@ -12345,6 +12454,416 @@ try{
     return _mxlRender(c);
   };
 }catch(e){}
+</script>
+
+<!-- ================= MATIX LABS v6 : boot -> welcome -> sign-in ================= -->
+<script id="mxL6Js">
+/* =====================================================================
+   MATIX LABS v6
+   Fixes + features added in this layer:
+     1. A real loading screen that runs FIRST, then the welcome screen,
+        then sign-in  (the labs.google order).
+     2. showGateAuth() / showGateWelcome() - these were MISSING, so the
+        "Continue -> Sign in" button did nothing and nobody could sign in.
+     3. Owner-managed content: the owner edits the loading + welcome
+        screens from inside the app, everyone sees it.
+     4. Wires up the dead "Sign out" / "Sign out of all devices" buttons.
+     5. Session validation on boot + labs.google polish.
+   ===================================================================== */
+(function(){
+'use strict';
+
+function $id(i){return document.getElementById(i);}
+function E(s){
+  if(typeof esc==='function')return esc(s);
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fn(name){return typeof window[name]==='function'?window[name]:null;}
+
+/* =====================================================================
+   1. OWNER-MANAGED SCREEN CONTENT
+   Stored at /siteContent/gate in Firebase so every member sees whatever
+   the owner writes. Falls back to these defaults when nothing is set.
+   ===================================================================== */
+var SC_PATH='/siteContent/gate';
+var SC_DEFAULT={
+  loadTagline:'Loading your math workspace\u2026',
+  loadNote:'Starting up',
+  wordmark:'MATIX',
+  eyebrow:'Free math education platform',
+  heading:'Welcome to Matix',
+  lead:'Matix is a free, educative math platform for the Math Club. Learn at your own pace, play member-made games, chat with AI tutors, and grow your skills \u2014 no paywall, ever.',
+  cta:'Continue \u2192 Sign in',
+  badge:'100% free \u00b7 forever',
+  cards:[
+    {icon:'\uD83E\uDD89',title:'Learn anything',body:'AI lessons explain math from zero, with quizzes that check your understanding.'},
+    {icon:'\uD83C\uDFAE',title:'Play & create',body:'Try club games or publish your own \u2014 a creative way to practice math.'},
+    {icon:'\u2728',title:'Club community',body:'Share ideas, earn points, chat with friends, and shape what Matix builds next.'}
+  ]
+};
+var SC=null;
+function scMerge(raw){
+  var c={},k;
+  for(k in SC_DEFAULT)if(SC_DEFAULT.hasOwnProperty(k))c[k]=SC_DEFAULT[k];
+  if(raw&&typeof raw==='object'){
+    for(k in raw)if(raw.hasOwnProperty(k)&&raw[k]!==null&&raw[k]!==undefined&&raw[k]!=='')c[k]=raw[k];
+  }
+  if(!c.cards||!c.cards.length)c.cards=SC_DEFAULT.cards;
+  if(c.cards&&c.cards.length===undefined){
+    var arr=[],kk;for(kk in c.cards)if(c.cards.hasOwnProperty(kk))arr.push(c.cards[kk]);c.cards=arr;
+  }
+  return c;
+}
+function scLoad(){
+  var g=fn('fbGet');
+  if(!g){SC=scMerge(null);return Promise.resolve(SC);}
+  return g(SC_PATH).then(function(raw){SC=scMerge(raw);return SC;},
+                         function(){SC=scMerge(null);return SC;});
+}
+function scSave(c){
+  var p=fn('fbPut');
+  if(!p)return Promise.reject(new Error('offline'));
+  return p(SC_PATH,c);
+}
+window.mxSiteContent=function(){return SC||scMerge(null);};
+
+/* =====================================================================
+   2. PAINT THE SCREENS FROM THAT CONTENT
+   ===================================================================== */
+function ownerNow(){
+  try{
+    var io=fn('isOwner'),gu=fn('getUser');
+    if(!io)return false;
+    return !!io(window.ME||(gu?gu():null));
+  }catch(e){return false;}
+}
+function paintBoot(c){
+  var t=$id('mxBootTag'),d=$id('mxBootDots'),w=$id('mxBootWord');
+  if(t)t.textContent=c.loadTagline||SC_DEFAULT.loadTagline;
+  if(d)d.textContent=c.loadNote||SC_DEFAULT.loadNote;
+  if(w)w.textContent=c.wordmark||SC_DEFAULT.wordmark;
+}
+function paintWelcome(c){
+  var inner=document.querySelector('#gateWelcome .gate-welcome-inner');
+  if(!inner)return;
+  var cards='';
+  (c.cards||[]).forEach(function(k){
+    if(!k||(!k.title&&!k.body))return;
+    cards+='<div class="gate-goal"><div class="gi">'+E(k.icon||'\u2728')+'</div>'
+         + '<b>'+E(k.title||'')+'</b><span>'+E(k.body||'')+'</span></div>';
+  });
+  var html='';
+  if(c.eyebrow)html+='<div><span class="lb-eyebrow"><span class="dot"></span>'+E(c.eyebrow)+'</span></div>';
+  html+='<div class="lb-word">'+E(c.wordmark||'MATIX')+'</div>';
+  html+='<h1 class="gate-welcome-h">'+E(c.heading||'')+'</h1>';
+  if(c.lead)html+='<p class="gate-welcome-lead no-mxlogo">'+E(c.lead)+'</p>';
+  if(cards)html+='<div class="gate-goals no-mxlogo">'+cards+'</div>';
+  html+='<button type="button" class="gate-continue" id="gContinue">'+E(c.cta||SC_DEFAULT.cta)+'</button>';
+  if(c.badge)html+='<div class="gate-free-badge">'+E(c.badge)+'</div>';
+  if(ownerNow())html+='<button type="button" class="gate-edit" id="gEditContent">\u270E Edit this screen (owner)</button>';
+  inner.innerHTML=html;
+  wireWelcome();
+}
+function repaintAll(){
+  var c=SC||scMerge(null);
+  paintBoot(c);paintWelcome(c);
+}
+window.mxRepaintScreens=repaintAll;
+
+/* =====================================================================
+   3. THE MISSING GATE NAVIGATION  (welcome <-> sign-in)
+   ===================================================================== */
+function showGateWelcome(){
+  var g=$id('gate'),w=$id('gateWelcome'),a=$id('gateAuth');
+  if(g)g.style.display='block';
+  if(a)a.style.display='none';
+  if(w)w.style.display='flex';
+  try{if(g)g.scrollTop=0;}catch(e){}
+}
+function showGateAuth(){
+  var rg=fn('refreshGate');if(rg){try{rg();}catch(e){}}
+  var g=$id('gate'),w=$id('gateWelcome'),a=$id('gateAuth');
+  if(g)g.style.display='block';
+  if(w)w.style.display='none';
+  if(a){
+    a.style.display='flex';
+    var sl=fn('setLogos');if(sl){try{sl();}catch(e){}}
+    setTimeout(function(){var u=$id('gUser');if(u)try{u.focus();}catch(e){}},90);
+  }
+  try{if(g)g.scrollTop=0;}catch(e){}
+}
+window.showGateWelcome=showGateWelcome;
+window.showGateAuth=showGateAuth;
+
+function wireWelcome(){
+  var c=$id('gContinue');if(c)c.onclick=showGateAuth;
+  var e=$id('gEditContent');if(e)e.onclick=function(){openSiteEditor();};
+}
+function wireGate(){
+  wireWelcome();
+  var b=$id('gBackWelcome');if(b)b.onclick=showGateWelcome;
+}
+
+/* =====================================================================
+   4. WIRE UP THE DEAD SIGN-OUT BUTTONS
+   ===================================================================== */
+function wireSignOuts(){
+  var one=fn('doSignOut'),all=fn('doSignOutAll');
+  function bind(id,f){
+    var b=$id(id);if(!b||!f)return;
+    b.onclick=function(){
+      if(!window.ME){var t=fn('toast');if(t)t('You are not signed in','err');return;}
+      f();
+    };
+  }
+  bind('signOut',one);bind('tbSignOut',one);bind('wsmSignOut',one);
+  bind('signOutAll',all);bind('tbSignOutAll',all);
+}
+
+/* =====================================================================
+   5. BOOT SEQUENCE : loading -> (welcome | straight into the app)
+   ===================================================================== */
+function afterBoot(){
+  wireGate();wireSignOuts();
+  var gu=fn('getUser'),u=gu?gu():null;
+  if(!u){showGateWelcome();return;}
+
+  var appEl=$id('app');
+  var entered=appEl&&appEl.style.display&&appEl.style.display!=='none';
+  var ea=fn('enterApp');
+  if(!entered&&ea){try{ea();}catch(e){}}
+
+  /* validate the session in the background (multi-device sign-out) */
+  var chk=fn('checkSessionValid');
+  if(!chk)return;
+  chk(u).then(function(ok){
+    if(ok)return;
+    try{
+      var cu=fn('clearUser');if(cu)cu();
+      var ld=fn('lsDel');if(ld&&window.KEEP_KEY)ld(window.KEEP_KEY);
+      var cl=fn('clearLocalSessionRev');if(cl)cl(u);
+    }catch(e){}
+    window.ME=null;
+    if(appEl)appEl.style.display='none';
+    showGateWelcome();
+    var t=fn('toast');if(t)t('Your session ended on another device. Please sign in again.','err');
+  },function(){});
+}
+
+function runBoot(){
+  var boot=$id('mxBoot'),bar=$id('mxBootBar');
+  var started=Date.now(),MIN=1400,done=false,pct=0;
+  var tick=setInterval(function(){
+    pct=Math.min(pct+Math.random()*10+6,92);
+    if(bar)bar.style.width=pct.toFixed(1)+'%';
+  },130);
+
+  function finish(){
+    if(done)return;done=true;
+    clearInterval(tick);
+    if(bar)bar.style.width='100%';
+    var wait=Math.max(0,MIN-(Date.now()-started));
+    setTimeout(function(){
+      try{document.documentElement.classList.remove('mx-booting');}catch(e){}
+      afterBoot();
+      if(boot){
+        boot.classList.add('mx-out');
+        setTimeout(function(){if(boot&&boot.parentNode)boot.parentNode.removeChild(boot);},600);
+      }
+    },wait+200);
+  }
+
+  scLoad().then(function(){repaintAll();finish();},function(){repaintAll();finish();});
+  setTimeout(finish,7000); /* never hang on a slow network */
+}
+
+/* =====================================================================
+   6. OWNER EDITOR for the loading + welcome screens
+   ===================================================================== */
+var SC_DRAFT=null;
+function cardRows(){
+  var out='';
+  (SC_DRAFT.cards||[]).forEach(function(k,i){
+    out+='<div class="mxsc-card" data-i="'+i+'">'
+       + '<div class="mxsc-hd"><span>Card '+(i+1)+'</span><button type="button" data-del="'+i+'">Remove</button></div>'
+       + '<div class="mxsc-row">'
+       +   '<input data-f="icon" value="'+E(k.icon||'')+'" maxlength="4" placeholder="\uD83E\uDD89">'
+       +   '<input data-f="title" value="'+E(k.title||'')+'" maxlength="40" placeholder="Card title">'
+       + '</div>'
+       + '<textarea data-f="body" rows="2" maxlength="180" placeholder="One or two lines" style="margin-top:8px">'+E(k.body||'')+'</textarea>'
+       + '</div>';
+  });
+  return out;
+}
+function syncDraftFromDom(card){
+  var f=function(id){var e=card.querySelector('#'+id);return e?e.value:'';};
+  SC_DRAFT.wordmark=f('scWord');
+  SC_DRAFT.loadTagline=f('scLoadTag');
+  SC_DRAFT.loadNote=f('scLoadNote');
+  SC_DRAFT.eyebrow=f('scEyebrow');
+  SC_DRAFT.heading=f('scHeading');
+  SC_DRAFT.lead=f('scLead');
+  SC_DRAFT.cta=f('scCta');
+  SC_DRAFT.badge=f('scBadge');
+  var list=card.querySelectorAll('.mxsc-card');
+  var cards=[];
+  Array.prototype.forEach.call(list,function(row){
+    var g=function(n){var e=row.querySelector('[data-f="'+n+'"]');return e?e.value.trim():'';};
+    var t=g('title'),b=g('body');
+    if(t||b)cards.push({icon:g('icon')||'\u2728',title:t,body:b});
+  });
+  SC_DRAFT.cards=cards;
+}
+function openSiteEditor(){
+  if(!ownerNow()){var t0=fn('toast');if(t0)t0('Only the owner can edit these screens','err');return;}
+  var m=$id('modal'),card=$id('modalCard');
+  if(!m||!card){var t1=fn('toast');if(t1)t1('Editor unavailable here','err');return;}
+  SC_DRAFT=scMerge(SC);
+
+  function render(){
+    card.innerHTML=
+       '<button class="modal-x" id="mX">\u00D7</button>'
+      +'<h2>\u270E Loading &amp; welcome screens</h2>'
+      +'<div class="mh-sub">You are the owner \u2014 whatever you write here is what every member sees before they sign in.</div>'
+      +'<label class="fl">Wordmark</label><input id="scWord" maxlength="18" value="'+E(SC_DRAFT.wordmark)+'">'
+      +'<h3 style="font-weight:800;font-size:.92rem;margin:16px 0 2px">Loading screen</h3>'
+      +'<label class="fl">Tagline</label><input id="scLoadTag" maxlength="90" value="'+E(SC_DRAFT.loadTagline)+'">'
+      +'<label class="fl">Small label under the bar</label><input id="scLoadNote" maxlength="32" value="'+E(SC_DRAFT.loadNote)+'">'
+      +'<h3 style="font-weight:800;font-size:.92rem;margin:16px 0 2px">Welcome screen</h3>'
+      +'<label class="fl">Eyebrow chip</label><input id="scEyebrow" maxlength="60" value="'+E(SC_DRAFT.eyebrow)+'">'
+      +'<label class="fl">Heading</label><input id="scHeading" maxlength="70" value="'+E(SC_DRAFT.heading)+'">'
+      +'<label class="fl">Intro paragraph</label><textarea id="scLead" rows="3" maxlength="400">'+E(SC_DRAFT.lead)+'</textarea>'
+      +'<label class="fl">Button text</label><input id="scCta" maxlength="40" value="'+E(SC_DRAFT.cta)+'">'
+      +'<label class="fl">Badge under the button</label><input id="scBadge" maxlength="40" value="'+E(SC_DRAFT.badge)+'">'
+      +'<h3 style="font-weight:800;font-size:.92rem;margin:16px 0 6px">Feature cards</h3>'
+      +'<div id="scCards">'+cardRows()+'</div>'
+      +'<button class="btn ghost sm" id="scAdd" style="margin-top:4px">+ Add card</button>'
+      +'<div class="err" id="scErr"></div>'
+      +'<div style="display:flex;gap:8px;margin-top:12px">'
+      +  '<button class="btn" id="scSave" style="flex:1">Save for everyone</button>'
+      +  '<button class="btn ghost" id="scReset">Reset</button>'
+      +'</div>';
+
+    var x=$id('mX');if(x)x.onclick=function(){var cm=fn('closeModal');if(cm)cm();else m.classList.remove('open');};
+
+    var add=$id('scAdd');
+    if(add)add.onclick=function(){
+      syncDraftFromDom(card);
+      if(SC_DRAFT.cards.length>=6){$id('scErr').textContent='Six cards is plenty.';return;}
+      SC_DRAFT.cards.push({icon:'\u2728',title:'',body:''});
+      render();
+    };
+    Array.prototype.forEach.call(card.querySelectorAll('[data-del]'),function(b){
+      b.onclick=function(){
+        syncDraftFromDom(card);
+        SC_DRAFT.cards.splice(parseInt(b.getAttribute('data-del'),10),1);
+        render();
+      };
+    });
+    var rst=$id('scReset');
+    if(rst)rst.onclick=function(){SC_DRAFT=scMerge(null);render();};
+
+    var sv=$id('scSave');
+    if(sv)sv.onclick=function(){
+      syncDraftFromDom(card);
+      if(!SC_DRAFT.heading.trim()){$id('scErr').textContent='Give the welcome screen a heading.';return;}
+      sv.disabled=true;sv.textContent='Saving\u2026';
+      scSave(SC_DRAFT).then(function(){
+        SC=scMerge(SC_DRAFT);repaintAll();
+        var cm=fn('closeModal');if(cm)cm();else m.classList.remove('open');
+        var t=fn('toast');if(t)t('Screens updated for everyone \u2728','ok');
+      },function(){
+        sv.disabled=false;sv.textContent='Save for everyone';
+        $id('scErr').textContent='Could not save. Check your connection.';
+      });
+    };
+  }
+
+  render();
+  m.classList.add('open');
+}
+window.mxOpenSiteEditor=openSiteEditor;
+
+/* ---- owner entry point in the sidebar ---- */
+function addOwnerNavItem(){
+  var nav=$id('nav');
+  if(!nav||!ownerNow()||$id('mxScNavItem'))return;
+  var d=document.createElement('div');
+  d.className='nav-item';
+  d.id='mxScNavItem';
+  d.innerHTML='<span class="ic">\u270E</span><span class="nm">Welcome screen</span>';
+  d.onclick=function(){openSiteEditor();};
+  var sep=document.createElement('div');sep.className='nav-sep';
+  nav.appendChild(sep);nav.appendChild(d);
+}
+var _renderNav=fn('renderNav');
+if(_renderNav){
+  window.renderNav=function(){
+    var r=_renderNav.apply(this,arguments);
+    try{addOwnerNavItem();}catch(e){}
+    return r;
+  };
+  try{renderNav=window.renderNav;}catch(e){}
+}
+/* also drop it into the desktop title-bar settings panel */
+function addOwnerPanelItem(){
+  var host=$id('tbMoreSettings');
+  if(!host||!ownerNow()||$id('mxScPanelItem'))return;
+  var b=document.createElement('button');
+  b.className='set-item';b.id='mxScPanelItem';
+  b.innerHTML='<span class="ic">\u270E</span><span class="nm">Welcome screen</span><span class="go">\u203A</span>';
+  b.onclick=function(){openSiteEditor();};
+  host.appendChild(b);
+}
+
+/* keep the owner entry points in sync once a role loads */
+var _enterApp=fn('enterApp');
+if(_enterApp){
+  window.enterApp=function(){
+    var r=_enterApp.apply(this,arguments);
+    setTimeout(function(){
+      try{addOwnerNavItem();}catch(e){}
+      try{addOwnerPanelItem();}catch(e){}
+      try{wireSignOuts();}catch(e){}
+    },400);
+    setTimeout(function(){try{addOwnerNavItem();addOwnerPanelItem();}catch(e){}},1800);
+    return r;
+  };
+  try{enterApp=window.enterApp;}catch(e){}
+}
+
+/* =====================================================================
+   7. labs.google polish - reveal cards on scroll
+   ===================================================================== */
+function initReveal(){
+  if(!('IntersectionObserver' in window))return;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){en.target.classList.add('mx-in');io.unobserve(en.target);}
+    });
+  },{rootMargin:'0px 0px -8% 0px',threshold:.06});
+  window.mxObserveReveal=function(root){
+    var scope=root||document;
+    var sel=scope.querySelectorAll('.lb-tile:not(.mx-reveal),.lb-card:not(.mx-reveal)');
+    Array.prototype.forEach.call(sel,function(n){n.classList.add('mx-reveal');io.observe(n);});
+  };
+  setInterval(function(){try{window.mxObserveReveal();}catch(e){}},1200);
+}
+
+/* =====================================================================
+   GO
+   ===================================================================== */
+function start(){
+  repaintAll();
+  wireGate();
+  initReveal();
+  runBoot();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
+else start();
+
+})();
 </script>
 </body>
 </html>
