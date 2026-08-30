@@ -1490,18 +1490,39 @@ body.dark .nav-sep{background:rgba(255,255,255,.10)}
 </head>
 <body>
 
-<!-- ========== SIGN IN ========== -->
+<!-- ========== Welcome + sign-in gate (labs.google style) ========== -->
 <div id="gate">
-  <div class="gate-card">
-    <div class="gate-logo" id="gateLogo"></div>
-    <h1 id="gTitle">Sign in to Matix</h1>
-    <p id="gSub">Your math club workspace</p>
-    <div class="fld"><label>Username</label><input id="gUser" placeholder="username" autocomplete="username"></div>
-    <div class="fld"><label>Password</label><input id="gPass" type="password" placeholder="password" autocomplete="current-password"></div>
-    <label class="toggle keep-row" id="gKeepWrap"><input type="checkbox" id="gKeep" checked><span>Keep me signed in on this device</span></label>
-    <div class="err" id="gErr"></div>
-    <button class="btn block" id="gBtn">Sign in</button>
-    <div class="swap" id="gSwap">New to Matix? <a id="gSwapA">Create an account</a></div>
+  <div class="lb-glows"><div class="lb-glow g1"></div><div class="lb-glow g2"></div><div class="lb-glow g3"></div><div class="lb-glow g4"></div></div>
+
+  <div id="gateWelcome" class="gate-welcome">
+    <div class="gate-welcome-inner lb-stagger">
+      <div><span class="lb-eyebrow"><span class="dot"></span>Free math education platform</span></div>
+      <div class="lb-word">MATIX</div>
+      <h1 class="gate-welcome-h">Welcome to Matix</h1>
+      <p class="gate-welcome-lead">Matix is a free, educative math platform for the Math Club. Learn at your own pace, play member-made games, chat with AI tutors, and grow your skills — no paywall, ever.</p>
+      <div class="gate-goals">
+        <div class="gate-goal"><div class="gi">🦉</div><b>Learn anything</b><span>AI lessons explain math from zero, with quizzes that check your understanding.</span></div>
+        <div class="gate-goal"><div class="gi">🎮</div><b>Play &amp; create</b><span>Try club games or publish your own — a creative way to practice math.</span></div>
+        <div class="gate-goal"><div class="gi">✨</div><b>Club community</b><span>Share ideas, earn points, chat with friends, and shape what Matix builds next.</span></div>
+      </div>
+      <button type="button" class="gate-continue" id="gContinue">Continue → Sign in</button>
+      <div class="gate-free-badge">100% free · forever</div>
+    </div>
+  </div>
+
+  <div id="gateAuth" class="gate-auth" style="display:none">
+    <div class="gate-card lb-stagger">
+      <div class="gate-logo" id="gateLogo"></div>
+      <h1 id="gTitle">Sign in to Matix</h1>
+      <p id="gSub">Your free math club workspace</p>
+      <div class="fld"><label for="gUser">Username</label><input id="gUser" type="text" autocomplete="username" placeholder="yourname"></div>
+      <div class="fld"><label for="gPass">Password</label><input id="gPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <label class="toggle gate-keep"><input type="checkbox" id="gKeep" checked> Keep me signed in on this device</label>
+      <button type="button" class="btn block" id="gBtn">Sign in</button>
+      <div class="err" id="gErr"></div>
+      <div class="swap" id="gSwap">New to Matix? <a id="gSwapA">Create an account</a></div>
+      <button type="button" class="gate-back" id="gBackWelcome">← Back to welcome</button>
+    </div>
   </div>
 </div>
 
@@ -1528,6 +1549,7 @@ body.dark .nav-sep{background:rgba(255,255,255,.10)}
   <div class="tb-acct" id="tbAcct"><div class="tb-avatar" id="tbAv">?</div><div class="u"><b id="tbName">Not signed in</b><span id="tbRole"></span></div></div>
   <button class="set-item" id="profileBtn"><span class="ic">🎨</span><span class="nm">My profile</span><span class="go">›</span></button>
   <button class="set-item" id="tbSignOut"><span class="ic">⏻</span><span class="nm">Sign out</span><span class="go">›</span></button>
+  <button class="set-item" id="tbSignOutAll"><span class="ic">⏻</span><span class="nm">Sign out of all devices</span><span class="go">›</span></button> 
   <h4>Appearance</h4>
   <div class="tb-modes">
     <button class="tb-mode" id="tbLight"><span>☀️</span><span>Light</span></button>
@@ -1717,6 +1739,7 @@ body.dark .tb-panel,body.dark .ws-menu{background:rgba(30,30,38,.9)}
         <div class="avatar" id="sbAv"></div>
         <div class="u"><b id="sbName"></b><span id="sbRole"></span></div>
         <button class="icon-btn" id="signOut" title="Sign out">⏻</button>
+        <button class="icon-btn" id="signOutAll" title="Sign out of all devices">⏻</button>
       </div>
     </aside>
 
@@ -1754,7 +1777,7 @@ body.dark .tb-panel,body.dark .ws-menu{background:rgba(30,30,38,.9)}
 
 <script>
 /* =====================================================================
-   Matix Workspace — single-file Notion-style app
+   Matix Workspace
    Firebase Realtime DB via REST (compatible with existing Matix data)
    ===================================================================== */
 var FB='https://matix-1d538-default-rtdb.firebaseio.com';
@@ -1819,10 +1842,41 @@ function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
 var KEEP_KEY='mx_keep_user';
+var SESSION_REV_KEY='mx_session_rev';
 function wantsKeep(){var b=$('gKeep');return b?!!b.checked:true;}
 function getUser(){return sessionStorage.getItem('mx_user')||sessionStorage.getItem('matix_auth_user')||lsGet(KEEP_KEY)||null;}
 function setUser(u){sessionStorage.setItem('mx_user',u);sessionStorage.setItem('matix_auth_user',u);if(wantsKeep()){lsSet(KEEP_KEY,u);}else{lsDel(KEEP_KEY);}}
 function clearUser(){sessionStorage.removeItem('mx_user');sessionStorage.removeItem('matix_auth_user');}
+function getLocalSessionRev(u){return Number(sessionStorage.getItem('mx_sess_'+u)||lsGet(SESSION_REV_KEY+'_'+u)||0);}
+function setLocalSessionRev(u,rev){sessionStorage.setItem('mx_sess_'+u,String(rev));if(wantsKeep())lsSet(SESSION_REV_KEY+'_'+u,String(rev));else lsDel(SESSION_REV_KEY+'_'+u);}
+function clearLocalSessionRev(u){sessionStorage.removeItem('mx_sess_'+u);lsDel(SESSION_REV_KEY+'_'+u);}
+function ensureSession(u){
+  return fbGet('/members/'+encodeURIComponent(u)).then(function(m){
+    var rev=(m&&m.sessionRev)?Number(m.sessionRev):0;
+    if(!rev){rev=Date.now();return fbPatch('/members/'+encodeURIComponent(u),{sessionRev:rev}).then(function(){return rev;});}
+    return rev;
+  }).then(function(rev){setLocalSessionRev(u,rev);return rev;});
+}
+function checkSessionValid(u){
+  return fbGet('/members/'+encodeURIComponent(u)).then(function(m){
+    if(!m||!m.sessionRev)return true;
+    var local=getLocalSessionRev(u);
+    if(!local)return true;
+    return local>=Number(m.sessionRev);
+  })['catch'](function(){return true;});
+}
+function bumpSessionRev(u){
+  var rev=Date.now();
+  return fbPatch('/members/'+encodeURIComponent(u),{sessionRev:rev}).then(function(){return rev;});
+}
+function doSignOut(){var u=ME||getUser();clearUser();lsDel(KEEP_KEY);if(u)clearLocalSessionRev(u);location.reload();}
+function doSignOutAll(){
+  if(!ME&&!getUser()){toast('You are not signed in','err');return;}
+  var u=ME||getUser();
+  customConfirm('Sign out of all devices? Every phone, tablet, and browser will need to sign in again.',function(){
+    bumpSessionRev(u).then(function(){clearUser();lsDel(KEEP_KEY);clearLocalSessionRev(u);toast('Signed out everywhere');location.reload();});
+  });
+}
 var ROLE_OWNER=false;
 var LEARN_OWNER_ONLY=true; /* TEMPORARY: Math Learn is owner-only for now. Set this to false to open it back up for everyone. */
 function canUseLearn(){return !LEARN_OWNER_ONLY||isOwner();}
@@ -1841,7 +1895,8 @@ function doSignIn(rawU,pass){
     if(!ok)return false;
     return fbGet('/bans/'+encodeURIComponent(u)).then(function(b){
       if(b){toast('This account has been suspended by the owner.','err');return false;}
-      setUser(u);return true;
+      setUser(u);
+      return ensureSession(u).then(function(){return true;});
     });
   });
 }
@@ -1852,9 +1907,10 @@ function doJoin(rawU,pass){
   if(VALID_MEMBERS[u])return Promise.resolve('reserved');
   return fbGet('/members/'+encodeURIComponent(u)).then(function(ex){
     if(ex)return 'taken';
-    return fbPut('/members/'+encodeURIComponent(u),{password:pass,joinedAt:Date.now(),testUser:true}).then(function(){
+    return fbPut('/members/'+encodeURIComponent(u),{password:pass,joinedAt:Date.now(),testUser:true,sessionRev:Date.now()}).then(function(){
       fbPut('/profiles/'+encodeURIComponent(u),{displayName:u,bio:'',updatedAt:Date.now()});
-      setUser(u);return 'ok';
+      setUser(u);
+      return ensureSession(u).then(function(){return 'ok';});
     });
   });
 }
@@ -1870,14 +1926,28 @@ function verifyPassword(u,pass){
    SIGN IN SCREEN
    ===================================================================== */
 var authMode='signin';
+function showGateAuth(){
+  refreshGate();
+  var w=$('gateWelcome'),a=$('gateAuth');
+  if(w)w.style.display='none';
+  if(a){a.style.display='flex';setLogos();setTimeout(function(){var u=$('gUser');if(u)u.focus();},80);}
+}
+function showGateWelcome(){
+  var w=$('gateWelcome'),a=$('gateAuth');
+  if(a)a.style.display='none';
+  if(w)w.style.display='flex';
+}
 function refreshGate(){
   var join=authMode==='join';
-  $('gTitle').textContent=join?'Create your Matix account':'Sign in to Matix';
-  $('gSub').textContent=join?'Join the community':'Your math club workspace';
+  var logo=typeof mxLogoHTML==='function'?mxLogoHTML():'Matix';
+  $('gTitle').innerHTML=join?'Create your '+logo+' account':'Sign in to '+logo;
+  $('gSub').textContent=join?'Join the community — free forever':'Your free math club workspace';
   $('gBtn').textContent=join?'Create account':'Sign in';
   $('gSwap').innerHTML=join?'Already a member? <a id="gSwapA">Sign in</a>':'New to Matix? <a id="gSwapA">Create an account</a>';
   $('gSwapA').onclick=function(){authMode=join?'signin':'join';refreshGate();$('gErr').textContent='';};
 }
+if($('gContinue'))$('gContinue').onclick=showGateAuth;
+if($('gBackWelcome'))$('gBackWelcome').onclick=showGateWelcome;
 $('gBtn').onclick=async function(){
   var b=$('gBtn'),e=$('gErr');e.textContent='';b.disabled=true;
   var u=$('gUser').value,p=$('gPass').value;
@@ -1891,7 +1961,6 @@ $('gBtn').onclick=async function(){
   }
 };
 $('gPass').addEventListener('keydown',function(e){if(e.key==='Enter')$('gBtn').click();});
-refreshGate();
 
 function enterApp(){
   ME=normUser(getUser());
@@ -1923,7 +1992,8 @@ function loadAvatar(){
     av.textContent=e||initials(ME);
   });
 }
-$('signOut').onclick=function(){clearUser();lsDel(KEEP_KEY);location.reload();};
+$('signOut').onclick=doSignOut;
+if($('signOutAll'))$('signOutAll').onclick=doSignOutAll;
 if($('profileBtn'))$('profileBtn').onclick=function(){if(!window.ME){toast('Sign in first to edit your profile','err');return;}openProfileModal();};
 
 /* =====================================================================
@@ -7453,7 +7523,8 @@ function initBar(){
   if($('tbThemeBtn'))$('tbThemeBtn').onclick=function(){if(!window.ME){toast('Sign in first to change the colour theme','err');return;}openTab({kind:'theme'});barPanel(false);};
   if($('tbMotionBtn'))$('tbMotionBtn').onclick=function(){var on=!getMotion();lsSet(MOTION_KEY,on?'1':'0');applyMotion(on);};
   if($('tbQuietBtn'))$('tbQuietBtn').onclick=function(){var on=!getQuiet();lsSet(QUIET_KEY,on?'1':'0');applyQuiet(on);if(!on)toast('Pop-ups are back on');};
-  if($('tbSignOut'))$('tbSignOut').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();};
+  if($('tbSignOut'))$('tbSignOut').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}doSignOut();};
+  if($('tbSignOutAll'))$('tbSignOutAll').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}doSignOutAll();};
   applyMotion(getMotion());
   if($('tbSettings'))$('tbSettings').onclick=function(e){e.stopPropagation();barPanel();};
   if($('tbReload'))$('tbReload').onclick=reloadActiveTab;
@@ -7485,7 +7556,7 @@ function initSidebar(){
   item('wsmTheme',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'theme'});});
   item('wsmDisc',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'discussions'});});
   item('wsmTranslate',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'translate'});});
-  item('wsmSignOut',function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();});
+  item('wsmSignOut',function(){if(!window.ME){toast('You are not signed in','err');return;}doSignOut();});
   if($('sbqHome'))$('sbqHome').onclick=function(){if(window.ME)openTab({kind:'home'});};
   if($('sbqAi'))$('sbqAi').onclick=function(){if(window.ME)openTab({kind:'ai'});};
   if($('sbqDisc'))$('sbqDisc').onclick=function(){if(window.ME)openTab({kind:'discussions'});};
@@ -7542,7 +7613,14 @@ initDesktop();
 initBar();
 initSidebar();
 initLang();
-if(getUser()){enterApp();}
+(function bootAuth(){
+  var u=getUser();
+  if(!u)return;
+  checkSessionValid(u).then(function(ok){
+    if(ok)enterApp();
+    else{clearUser();lsDel(KEEP_KEY);clearLocalSessionRev(u);toast('Your session ended on another device. Please sign in again.','err');}
+  });
+})();
 
 /* =====================================================================
    MATIX UI v5  —  menu filter, recent pages, folding groups,
@@ -8079,15 +8157,37 @@ body.dark .lx-mist{background:rgba(229,100,88,.12);border-color:rgba(229,100,88,
    ===================================================================== */
 
 /* ---- sign-in gate, labs style ---- */
-#gate{background:
-  radial-gradient(640px 420px at 0% 0%,rgba(255,79,163,.20),transparent 62%),
-  radial-gradient(640px 420px at 100% 0%,rgba(139,92,246,.20),transparent 62%),
-  radial-gradient(640px 420px at 0% 100%,rgba(56,189,248,.18),transparent 62%),
-  radial-gradient(640px 420px at 100% 100%,rgba(251,146,60,.18),transparent 62%),
-  var(--bg)}
-.gate-card{border-radius:26px;box-shadow:0 30px 90px rgba(139,92,246,.20);border:1px solid rgba(139,92,246,.18)}
-.gate-card h1{background:linear-gradient(90deg,var(--mx-pink),var(--mx-purple) 45%,var(--mx-blue));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
-body.dark .gate-card{background:#191926;border-color:#33334a}
+#gate{position:fixed;inset:0;z-index:200;overflow-y:auto;background:var(--bg);display:block;align-items:stretch;justify-content:flex-start;padding:0}
+#gate .lb-glows{position:fixed;inset:0;pointer-events:none}
+.gate-welcome{position:relative;min-height:100%;display:flex;align-items:center;justify-content:center;padding:48px 24px 90px;text-align:center;z-index:1}
+.gate-welcome-inner{max-width:760px;width:100%}
+.gate-welcome-h{font-size:clamp(1.35rem,3vw,2rem);font-weight:900;margin:16px 0 12px;letter-spacing:-.02em}
+.gate-welcome-lead{font-size:clamp(.98rem,2vw,1.12rem);color:var(--muted);line-height:1.65;max-width:580px;margin:0 auto 28px}
+.gate-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:0 auto 34px;max-width:680px;text-align:left}
+.gate-goal{border:1px solid var(--border);border-radius:18px;padding:18px 20px;background:var(--card);transition:transform .2s,box-shadow .2s,border-color .2s}
+.gate-goal:hover{transform:translateY(-4px);box-shadow:0 14px 36px rgba(0,0,0,.09);border-color:rgba(139,92,246,.35)}
+.gate-goal .gi{font-size:1.55rem;margin-bottom:8px}
+.gate-goal b{display:block;font-size:.94rem;margin-bottom:4px;font-weight:800}
+.gate-goal span{font-size:.84rem;color:var(--muted);line-height:1.5}
+.gate-continue{border:none;border-radius:999px;padding:15px 34px;font-size:1.04rem;font-weight:800;color:#fff;background:linear-gradient(90deg,var(--mx-purple,#8b5cf6),var(--mx-blue,#38bdf8));box-shadow:0 10px 34px rgba(139,92,246,.38);cursor:pointer;transition:transform .15s,filter .15s;font-family:inherit}
+.gate-continue:hover{filter:brightness(1.07);transform:translateY(-2px)}
+.gate-free-badge{display:inline-block;margin-top:16px;font-size:.78rem;font-weight:800;color:var(--mx-purple,#8b5cf6);background:rgba(139,92,246,.12);border-radius:999px;padding:6px 14px;letter-spacing:.02em}
+.gate-auth{position:relative;min-height:100%;display:flex;align-items:center;justify-content:center;padding:48px 20px 80px;z-index:1}
+.gate-auth .gate-card{max-width:430px;width:100%;text-align:center;padding:38px 34px 30px;border-radius:26px;box-shadow:0 30px 90px rgba(139,92,246,.20);border:1px solid rgba(139,92,246,.18);background:#fff;animation:pop .28s ease}
+.gate-auth .gate-logo{width:64px;height:64px;margin:0 auto 16px}
+.gate-back{margin-top:16px;font-size:.86rem;color:var(--muted);cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 8px;border-radius:8px}
+.gate-back:hover{color:var(--text);background:var(--hover)}
+#gateAuth .fld{text-align:left;margin-bottom:14px}
+#gateAuth .gate-card h1{font-size:1.5rem;margin-bottom:6px;font-weight:900;background:linear-gradient(90deg,var(--mx-pink),var(--mx-purple) 45%,var(--mx-blue));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
+#gTitle .mxlogo{-webkit-text-fill-color:initial;color:var(--text)}
+#gateAuth .gate-card p{color:var(--muted);font-size:.92rem;margin-bottom:22px}
+#gateAuth input{border-radius:12px;padding:12px 14px;font-size:.98rem}
+#gateAuth .btn.block{border-radius:14px;padding:13px;font-size:1rem;margin-top:6px}
+.gate-keep{display:flex;align-items:center;gap:8px;justify-content:flex-start;font-size:.86rem;color:var(--muted);margin:4px 0 14px;cursor:pointer}
+body.dark .gate-goal{background:#1e2029;border-color:#33334a}
+body.dark .gate-auth .gate-card{background:#191926;border-color:#33334a}
+body.dark #gate{background:#12121a}
+@media(max-width:640px){.gate-welcome{padding:32px 16px 70px}.gate-goals{grid-template-columns:1fr}}
 
 /* ---- page hero banner ---- */
 .lb-ph{display:flex;gap:16px;align-items:center;margin:6px 0 22px;padding:22px 24px;border-radius:20px;color:#fff;position:relative;overflow:hidden;animation:lbUp .5s cubic-bezier(.2,.7,.2,1) both;text-align:left}
