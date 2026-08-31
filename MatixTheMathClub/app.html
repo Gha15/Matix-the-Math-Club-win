@@ -1916,6 +1916,14 @@ body.reduce-motion #gate .lg-blob{display:none}
   <div id="mxBootDots">Starting up</div>
 </div>
 
+<div id="mxBoot" role="status" aria-live="polite" aria-label="Loading Matix">
+  <div class="lg-mark" aria-hidden="true">&#9879;</div>
+  <div id="mxBootWord">MATIX</div>
+  <div id="mxBootTag">Loading your math workspace&#8230;</div>
+  <div id="mxBootTrack" aria-hidden="true"><div id="mxBootBar"></div></div>
+  <div id="mxBootDots">Starting up</div>
+</div>
+
 
 <!-- ========== Welcome + sign-in gate (labs.google style) ========== -->
 <div id="gate">
@@ -2323,6 +2331,7 @@ function doSignIn(rawU,pass){
     return fbGet('/bans/'+encodeURIComponent(u)).then(function(b){
       if(b){toast('This account has been suspended by the owner.','err');return false;}
       setUser(u);return true;
+      setUser(u);return true;
     });
   });
 }
@@ -2334,7 +2343,9 @@ function doJoin(rawU,pass){
   return fbGet('/members/'+encodeURIComponent(u)).then(function(ex){
     if(ex)return 'taken';
     return fbPut('/members/'+encodeURIComponent(u),{password:pass,joinedAt:Date.now(),testUser:true}).then(function(){
+    return fbPut('/members/'+encodeURIComponent(u),{password:pass,joinedAt:Date.now(),testUser:true}).then(function(){
       fbPut('/profiles/'+encodeURIComponent(u),{displayName:u,bio:'',updatedAt:Date.now()});
+      setUser(u);return 'ok';
       setUser(u);return 'ok';
     });
   });
@@ -2355,6 +2366,8 @@ function refreshGate(){
   var join=authMode==='join';
   $('gTitle').textContent=join?'Create your Matix account':'Sign in to Matix';
   $('gSub').textContent=join?'Join the community':'Your math club workspace';
+  $('gTitle').textContent=join?'Create your Matix account':'Sign in to Matix';
+  $('gSub').textContent=join?'Join the community':'Your math club workspace';
   $('gBtn').textContent=join?'Create account':'Sign in';
   $('gSwap').innerHTML=join?'Already a member? <a id="gSwapA">Sign in</a>':'New to Matix? <a id="gSwapA">Create an account</a>';
   $('gSwapA').onclick=function(){authMode=join?'signin':'join';refreshGate();$('gErr').textContent='';};
@@ -2372,6 +2385,7 @@ $('gBtn').onclick=async function(){
   }
 };
 $('gPass').addEventListener('keydown',function(e){if(e.key==='Enter')$('gBtn').click();});
+refreshGate();
 refreshGate();
 
 function enterApp(){
@@ -2404,6 +2418,7 @@ function loadAvatar(){
     av.textContent=e||initials(ME);
   });
 }
+$('signOut').onclick=function(){clearUser();lsDel(KEEP_KEY);location.reload();};
 $('signOut').onclick=function(){clearUser();lsDel(KEEP_KEY);location.reload();};
 if($('profileBtn'))$('profileBtn').onclick=function(){if(!window.ME){toast('Sign in first to edit your profile','err');return;}openProfileModal();};
 
@@ -7935,6 +7950,7 @@ function initBar(){
   if($('tbMotionBtn'))$('tbMotionBtn').onclick=function(){var on=!getMotion();lsSet(MOTION_KEY,on?'1':'0');applyMotion(on);};
   if($('tbQuietBtn'))$('tbQuietBtn').onclick=function(){var on=!getQuiet();lsSet(QUIET_KEY,on?'1':'0');applyQuiet(on);if(!on)toast('Pop-ups are back on');};
   if($('tbSignOut'))$('tbSignOut').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();};
+  if($('tbSignOut'))$('tbSignOut').onclick=function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();};
   applyMotion(getMotion());
   if($('tbSettings'))$('tbSettings').onclick=function(e){e.stopPropagation();barPanel();};
   if($('tbReload'))$('tbReload').onclick=reloadActiveTab;
@@ -7966,6 +7982,7 @@ function initSidebar(){
   item('wsmTheme',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'theme'});});
   item('wsmDisc',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'discussions'});});
   item('wsmTranslate',function(){if(!window.ME){toast('Sign in first','err');return;}openTab({kind:'translate'});});
+  item('wsmSignOut',function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();});
   item('wsmSignOut',function(){if(!window.ME){toast('You are not signed in','err');return;}clearUser();lsDel(KEEP_KEY);location.reload();});
   if($('sbqHome'))$('sbqHome').onclick=function(){if(window.ME)openTab({kind:'home'});};
   if($('sbqAi'))$('sbqAi').onclick=function(){if(window.ME)openTab({kind:'ai'});};
@@ -8023,6 +8040,7 @@ initDesktop();
 initBar();
 initSidebar();
 initLang();
+if(getUser()){enterApp();}
 if(getUser()){enterApp();}
 
 /* =====================================================================
@@ -8560,6 +8578,15 @@ body.dark .lx-mist{background:rgba(229,100,88,.12);border-color:rgba(229,100,88,
    ===================================================================== */
 
 /* ---- sign-in gate, labs style ---- */
+#gate{background:
+  radial-gradient(640px 420px at 0% 0%,rgba(255,79,163,.20),transparent 62%),
+  radial-gradient(640px 420px at 100% 0%,rgba(139,92,246,.20),transparent 62%),
+  radial-gradient(640px 420px at 0% 100%,rgba(56,189,248,.18),transparent 62%),
+  radial-gradient(640px 420px at 100% 100%,rgba(251,146,60,.18),transparent 62%),
+  var(--bg)}
+.gate-card{border-radius:26px;box-shadow:0 30px 90px rgba(139,92,246,.20);border:1px solid rgba(139,92,246,.18)}
+.gate-card h1{background:linear-gradient(90deg,var(--mx-pink),var(--mx-purple) 45%,var(--mx-blue));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
+body.dark .gate-card{background:#191926;border-color:#33334a}
 #gate{background:
   radial-gradient(640px 420px at 0% 0%,rgba(255,79,163,.20),transparent 62%),
   radial-gradient(640px 420px at 100% 0%,rgba(139,92,246,.20),transparent 62%),
@@ -10852,6 +10879,7 @@ function mxLogoizeText(node){
     var pt=p.tagName||'';
     if(/^(SCRIPT|STYLE|TEXTAREA|OPTION|SELECT|TITLE)$/i.test(pt))return;
     if(p.closest&&(p.closest('.mxlogo')||p.closest('.no-mxlogo')||p.closest('[contenteditable="true"]')))return;
+    if(p.closest&&(p.closest('.mxlogo')||p.closest('.no-mxlogo')||p.closest('[contenteditable="true"]')))return;
     var tmp=document.createElement('span');
     tmp.innerHTML=esc(s).replace(MXLOGO_RE_G,mxLogoHTML());
     var frag=document.createDocumentFragment();
@@ -10867,6 +10895,7 @@ function mxLogoizeNode(root){
     if(root.nodeType!==1)return;
     var tag=root.tagName||'';
     if(/^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION|IFRAME|CANVAS|SVG)$/i.test(tag))return;
+    if(root.closest&&(root.closest('.mxlogo')||root.closest('.no-mxlogo')||root.closest('[contenteditable="true"]')))return;
     if(root.closest&&(root.closest('.mxlogo')||root.closest('.no-mxlogo')||root.closest('[contenteditable="true"]')))return;
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false),n,list=[];
     while((n=w.nextNode())){if(MXLOGO_RE_T.test(n.nodeValue||''))list.push(n);}
