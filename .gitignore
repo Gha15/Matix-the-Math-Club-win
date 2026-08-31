@@ -360,4 +360,8 @@ MigrationBackup/
 .ionide/
 
 # Fody - auto-generated XML schema
-FodyWeavers.xsd
+FodyWeavers.xsd.vs/
+bin/
+obj/
+*.user
+Output/
