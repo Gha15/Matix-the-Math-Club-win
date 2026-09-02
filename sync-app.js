@@ -26,6 +26,7 @@ if (!fs.existsSync(src)) {
 
 // every known shell location; only folders that exist are touched
 var candidates = [
+  'temp/app.html',               // Windows publish source linked by .csproj
   'MatixTheMathClub/app.html',     // Windows (WebView2)
   'Matix the Math Club/app.html',  // iOS + macOS (bundle resource)
   'app/src/main/assets/app.html'   // Android (Gradle normally handles this)

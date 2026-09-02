@@ -27,6 +27,14 @@ jobs:
         # Added -p:PublishReadyToRun=true and -p:ReadyToRunEmitSymbols=false to optimize assembly sizes safely
         run: dotnet publish MatixTheMathClub/MatixTheMathClub.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishReadyToRun=true -p:ReadyToRunEmitSymbols=false -p:AssemblyName="MatixTheMathClub-Win" -p:PublishDir="${{ github.workspace }}/publish/"
 
+      - name: Verify published app output
+        shell: pwsh
+        run: |
+          $exe = Join-Path "${{ github.workspace }}" "publish/MatixTheMathClub-Win.exe"
+          if (-not (Test-Path $exe)) {
+            throw "Publish step did not produce $exe"
+          }
+
       - name: Build the installer via Pre-installed Inno Setup
         shell: pwsh
         run: |
@@ -44,6 +52,14 @@ jobs:
           Write-Host "Using ISCC path: $iscc"
           & $iscc 'installer-config.iss'
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compiler compilation failed.' }
+
+      - name: Verify installer output
+        shell: pwsh
+        run: |
+          $out = Get-ChildItem -Path "Output" -Filter "*.exe" -File -ErrorAction SilentlyContinue
+          if (-not $out) {
+            throw "Inno Setup did not produce Output/*.exe"
+          }
 
       - uses: actions/upload-artifact@v4
         with:
